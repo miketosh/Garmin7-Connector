@@ -9,13 +9,13 @@ Requirements: Windows PowerShell 5.1 or PowerShell 7. The decoder reads the adja
 Run from the repository root:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\\decode_watch_log.ps1 -Path .\\path\\to\\watch-log.txt
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\decode_watch_log.ps1 -Path .\path\to\watch-log.txt
 ```
 
 To save a decoded copy rather than print it to the console:
 
 ```powershell
-pwsh -NoProfile -File tools\\decode_watch_log.ps1 -Path .\\path\\to\\watch-log.txt -OutFile .\\watch-log.decoded.txt
+pwsh -NoProfile -File tools\decode_watch_log.ps1 -Path .\path\to\watch-log.txt -OutFile .\watch-log.decoded.txt
 ```
 
 The original input is not modified. The script expands known two-character event codes into readable event names and named fields, renders known boolean values as `true`/`false`, and reconstructs clock timestamps from timer deltas when the log includes a time anchor. Older long-format lines, separators, notes, and unknown codes are preserved. For an older build, use the code table from the commit that generated that build where possible; mappings may change as the project evolves.
