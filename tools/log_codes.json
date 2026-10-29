@@ -1,0 +1,1239 @@
+{
+  "AA": {
+    "event": "AUTO_CONNECT_ABORT",
+    "variants": [
+      [
+        "reason=\"profile-registration-status\"",
+        "retrySec=\"240\""
+      ],
+      [
+        "reason=\"profile-registration-timeout\"",
+        "retrySec=\"240\""
+      ]
+    ]
+  },
+  "AB": {
+    "event": "KEKS_ROUND_TIMING",
+    "variants": [
+      [
+        "stage",
+        "round",
+        "elapsedMs"
+      ]
+    ]
+  },
+  "AR": {
+    "event": "AUTO_CONNECT_RESUME",
+    "variants": [
+      [
+        "reason=\"profiles-ready\""
+      ]
+    ]
+  },
+  "AS": {
+    "event": "AUTH_STATUS",
+    "variants": [
+      [
+        "authenticated",
+        "bonded",
+        "bondedRaw",
+        "needsRefresh",
+        "note=\"wire-status-only\""
+      ]
+    ]
+  },
+  "BA": {
+    "event": "BOND_ABORT",
+    "variants": [
+      [
+        "reason=\"not-connected\""
+      ],
+      [
+        "reason=\"already-attempted\""
+      ]
+    ]
+  },
+  "BL": {
+    "event": "BACKLIGHT_ERROR",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "BQ": {
+    "event": "BOND_STATE_QUERY_EXCEPTION",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "BR": {
+    "event": "BLE_BOND_REQUEST",
+    "variants": [
+      [
+        "trigger=\"post-keks-protocol-signal\""
+      ]
+    ]
+  },
+  "BV": {
+    "event": "BUILD",
+    "variants": [
+      [
+        "version"
+      ]
+    ]
+  },
+  "BX": {
+    "event": "BOND_EXCEPTION",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "CA": {
+    "event": "CONNECT_ABORT",
+    "variants": [
+      [
+        "reason=\"sensor-reported-terminal-state\"",
+        "state"
+      ],
+      [
+        "reason=\"no-pairing-code\""
+      ],
+      [
+        "reason=\"target-not-seen\"",
+        "target"
+      ],
+      [
+        "reason=\"profile-registration-failed\"",
+        "retrySec=\"240\""
+      ]
+    ]
+  },
+  "CB": {
+    "event": "COLLECTION_BLOCKED",
+    "variants": [
+      [
+        "reason",
+        "trigger"
+      ]
+    ]
+  },
+  "CC": {
+    "event": "CONNECT_CONFIRMED",
+    "variants": [
+      [
+        "source",
+        "name",
+        "attempt"
+      ]
+    ]
+  },
+  "CD": {
+    "event": "CONNECT_DEFERRED",
+    "variants": [
+      [
+        "profilesReady=\"false\"",
+        "retry=\"on-profile-callback\""
+      ]
+    ]
+  },
+  "CF": {
+    "event": "CONNECT_FAILED",
+    "variants": [
+      [
+        "reason",
+        "attempts",
+        "retryMs"
+      ]
+    ]
+  },
+  "CN": {
+    "event": "CONNECT_RETURN",
+    "variants": [
+      [
+        "null=\"true\"",
+        "attempt"
+      ],
+      [
+        "null=\"false\"",
+        "connected",
+        "attempt",
+        "note=\"connected-false-is-pending-until-callback\""
+      ]
+    ]
+  },
+  "CO": {
+    "event": "G7_CONTROL_OPCODE",
+    "variants": [
+      [
+        "opcode",
+        "data"
+      ]
+    ]
+  },
+  "CQ": {
+    "event": "CONNECT_REQUEST",
+    "variants": [
+      [
+        "name",
+        "attempt",
+        "rssi",
+        "strategy=\"D\""
+      ]
+    ]
+  },
+  "CS": {
+    "event": "CONNECT_SKIPPED",
+    "variants": [
+      [
+        "reason=\"attempt-already-made\"",
+        "inFlight"
+      ]
+    ]
+  },
+  "CT": {
+    "event": "CRYPTO_SELFTEST",
+    "variants": [
+      [
+        "sha256",
+        "aes128",
+        "nativeEc",
+        "elapsedMs",
+        "tickBudgetK",
+        "part"
+      ]
+    ]
+  },
+  "CX": {
+    "event": "CONNECT_EXCEPTION",
+    "variants": [
+      [
+        "attempt",
+        "error"
+      ]
+    ]
+  },
+  "DA": {
+    "event": "G7_CANDIDATE_PASSED_OVER",
+    "variants": [
+      [
+        "name",
+        "waitMs"
+      ]
+    ]
+  },
+  "DB": {
+    "event": "G7_DEVICE_BINDING",
+    "variants": [
+      [
+        "name",
+        "code",
+        "stored"
+      ]
+    ]
+  },
+  "DC": {
+    "event": "G7_DEVICE_CANDIDATE",
+    "variants": [
+      [
+        "name",
+        "rssi",
+        "seen"
+      ]
+    ]
+  },
+  "DD": {
+    "event": "G7_DEVICE_BOUND",
+    "variants": [
+      [
+        "name",
+        "code",
+        "source"
+      ]
+    ]
+  },
+  "DF": {
+    "event": "G7_DEVICE_FORGOTTEN",
+    "variants": [
+      [
+        "unpaired"
+      ]
+    ]
+  },
+  "DK": {
+    "event": "G7_CANDIDATE_NOT_KEY_SENSOR",
+    "variants": [
+      [
+        "name",
+        "keySensor"
+      ]
+    ]
+  },
+  "DN": {
+    "event": "G7_WRONG_NAME",
+    "variants": [
+      [
+        "name",
+        "code",
+        "count"
+      ]
+    ]
+  },
+  "DR": {
+    "event": "CONNECTION_DROPPED",
+    "variants": [
+      [
+        "reading"
+      ]
+    ]
+  },
+  "DU": {
+    "event": "G7_DEVICE_UNPAIR_FAILED",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "DW": {
+    "event": "G7_WRONG_NAME_SKIPPED",
+    "variants": [
+      [
+        "name"
+      ]
+    ]
+  },
+  "DX": {
+    "event": "G7_DEVICE_CANDIDATE_FAILED",
+    "variants": [
+      [
+        "name",
+        "seen",
+        "unpaired"
+      ]
+    ]
+  },
+  "EC": {
+    "event": "NATIVE_EC_CALIBRATION_START",
+    "variants": [
+      []
+    ]
+  },
+  "EN": {
+    "event": "BLE_ENCRYPTION_STATUS",
+    "variants": [
+      [
+        "status",
+        "connected",
+        "bonded",
+        "note=\"BLE_LINK_SECURITY_NOT_G7_APP_AUTH\""
+      ]
+    ]
+  },
+  "GA": {
+    "event": "GATT_AUTH_INDICATION",
+    "variants": [
+      [
+        "opcode",
+        "bytes"
+      ]
+    ]
+  },
+  "GD": {
+    "event": "GATT_DESCRIPTOR_EXCEPTION",
+    "variants": [
+      [
+        "characteristic",
+        "error"
+      ]
+    ]
+  },
+  "GE": {
+    "event": "GATT_ENUMERATION_DONE",
+    "variants": [
+      [
+        "services",
+        "layout"
+      ]
+    ]
+  },
+  "GF": {
+    "event": "GATT_WRITE_FAILED",
+    "variants": [
+      [
+        "purpose",
+        "reason"
+      ]
+    ]
+  },
+  "GI": {
+    "event": "GATT_INDICATION",
+    "variants": [
+      [
+        "channel=\"CONTROL\"",
+        "data"
+      ]
+    ]
+  },
+  "GL": {
+    "event": "G7_GLUCOSE",
+    "variants": [
+      [
+        "seq",
+        "sensorClock",
+        "ageSec",
+        "glucoseRaw",
+        "glucoseMgDl",
+        "reliable",
+        "displayOnly",
+        "algorithmState",
+        "trendTenths",
+        "predictedRaw",
+        "calibration"
+      ]
+    ]
+  },
+  "GQ": {
+    "event": "GLUCOSE_REQUEST",
+    "variants": [
+      [
+        "opcode=\"4E\""
+      ]
+    ]
+  },
+  "GR": {
+    "event": "G7_GLUCOSE_REJECT",
+    "variants": [
+      [
+        "length",
+        "marker"
+      ]
+    ]
+  },
+  "GS": {
+    "event": "GLUCOSE_REQUEST_SKIPPED",
+    "variants": [
+      [
+        "reason=\"write-queue-full\""
+      ]
+    ]
+  },
+  "GW": {
+    "event": "GATT_CHARACTERISTIC_WRITE",
+    "variants": [
+      [
+        "uuid",
+        "status"
+      ]
+    ]
+  },
+  "GX": {
+    "event": "GATT_ENUMERATION_EXCEPTION",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "K0": {
+    "event": "KEKS_SETTLE_PING",
+    "variants": [
+      [
+        "status",
+        "callbackMs"
+      ]
+    ]
+  },
+  "K1": {
+    "event": "KEKS_ROUND_RX_FIRST",
+    "variants": [
+      [
+        "state",
+        "bytes"
+      ]
+    ]
+  },
+  "K2": {
+    "event": "KEKS_CHALLENGE_RX",
+    "variants": [
+      [
+        "proofBytes=\"8\"",
+        "challengeBytes=\"8\"",
+        "offset=\"9\""
+      ]
+    ]
+  },
+  "K3": {
+    "event": "KEKS_CHALLENGE_REJECT",
+    "variants": [
+      [
+        "reason=\"short\"",
+        "bytes"
+      ]
+    ]
+  },
+  "K4": {
+    "event": "KEKS_CHALLENGE_RESPONSE_TX",
+    "variants": [
+      [
+        "opcode=\"04\"",
+        "payloadBytes=\"8\"",
+        "keySource=\"saved-persistence-key\""
+      ]
+    ]
+  },
+  "K5": {
+    "event": "KEKS_CHALLENGE_RESPONSE_EXCEPTION",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "K6": {
+    "event": "KEKS_CHALLENGE_RESPONSE_ABORT",
+    "variants": [
+      [
+        "reason=\"write-queue-full\""
+      ]
+    ]
+  },
+  "K7": {
+    "event": "KEKS_CHALLENGE_ENCRYPT_FAILED",
+    "variants": [
+      []
+    ]
+  },
+  "K8": {
+    "event": "KEKS_BOND_WAIT",
+    "variants": [
+      [
+        "indicationBytes",
+        "authenticated"
+      ]
+    ]
+  },
+  "K9": {
+    "event": "KEKS_BOND_TRIGGER_WAIT",
+    "variants": [
+      [
+        "bytes"
+      ]
+    ]
+  },
+  "KA": {
+    "event": "KEKS_ABORT",
+    "variants": [
+      [
+        "reason=\"extra-cccd-write-failed\"",
+        "status"
+      ],
+      [
+        "reason",
+        "state",
+        "rxBytes",
+        "connectMs"
+      ]
+    ]
+  },
+  "KB": {
+    "event": "KEKS_FRESH_BEGIN",
+    "variants": [
+      [
+        "code",
+        "slot",
+        "chunksWithResponse",
+        "settleMode"
+      ]
+    ]
+  },
+  "KC": {
+    "event": "KEKS_COMMAND_TX",
+    "variants": [
+      [
+        "purpose",
+        "bytes",
+        "ack",
+        "ackMs",
+        "gapMs"
+      ]
+    ]
+  },
+  "KD": {
+    "event": "KEKS_CHUNK_ACK",
+    "variants": [
+      [
+        "chunk",
+        "callbackMs"
+      ]
+    ]
+  },
+  "KE": {
+    "event": "KEKS_REMOTE_CERT_RX",
+    "variants": [
+      [
+        "complete=\"true\"",
+        "bytes"
+      ]
+    ]
+  },
+  "KF": {
+    "event": "KEKS_CHUNK_RESPONSE_REFUSED",
+    "variants": [
+      [
+        "status",
+        "purpose",
+        "offset"
+      ]
+    ]
+  },
+  "KG": {
+    "event": "KEKS_CERT_FLOW_BEGIN",
+    "variants": [
+      [
+        "authenticated=\"true\"",
+        "bonded=\"false\"",
+        "material=\"validated\""
+      ]
+    ]
+  },
+  "KH": {
+    "event": "KEKS_AUTH_PROOF_OK",
+    "variants": [
+      [
+        "displayType"
+      ]
+    ]
+  },
+  "KI": {
+    "event": "KEKS_AUTH_INDICATION",
+    "variants": [
+      [
+        "opcode",
+        "bytes",
+        "state"
+      ]
+    ]
+  },
+  "KJ": {
+    "event": "KEKS_SAVED_KEY_UNAVAILABLE",
+    "variants": [
+      [
+        "roundsRequired=\"true\""
+      ]
+    ]
+  },
+  "KK": {
+    "event": "KEKS_SAVED_KEY_INVALID",
+    "variants": [
+      []
+    ]
+  },
+  "KL": {
+    "event": "KEKS_LOCAL_ROUND_PENDING",
+    "variants": [
+      [
+        "round"
+      ]
+    ]
+  },
+  "KM": {
+    "event": "KEKS_MATH_DONE",
+    "variants": [
+      [
+        "action",
+        "ok",
+        "durationMs",
+        "ticks",
+        "maxTickK"
+      ]
+    ]
+  },
+  "KN": {
+    "event": "KEKS_NOT_STARTED",
+    "variants": [
+      [
+        "reason=\"no-pairing-code\""
+      ],
+      [
+        "reason=\"subscriptions-not-ready\""
+      ],
+      [
+        "reason=\"pairing-code-format\""
+      ],
+      [
+        "reason=\"native-ec-calibration-failed\""
+      ],
+      [
+        "reason=\"setup-qr-material-missing-or-invalid\""
+      ],
+      [
+        "reason=\"scalar-setup\""
+      ]
+    ]
+  },
+  "KO": {
+    "event": "KEKS_COMPLETE",
+    "variants": [
+      [
+        "authenticated",
+        "bonded",
+        "keyPersisted",
+        "displayType",
+        "source"
+      ]
+    ]
+  },
+  "KP": {
+    "event": "KEKS_PAYLOAD_TX",
+    "variants": [
+      [
+        "purpose",
+        "bytes",
+        "callbacksMissed",
+        "busyRetries",
+        "sendMs",
+        "withResponse",
+        "then=\"command\""
+      ],
+      [
+        "purpose",
+        "bytes",
+        "callbacksMissed",
+        "sendMs",
+        "withResponse"
+      ]
+    ]
+  },
+  "KQ": {
+    "event": "KEKS_AUTH_REQUEST",
+    "variants": [
+      [
+        "tokenBytes=\"8\"",
+        "displayType"
+      ]
+    ]
+  },
+  "KR": {
+    "event": "KEKS_ROUND_ACK",
+    "variants": [
+      [
+        "matched",
+        "bytes",
+        "status",
+        "round",
+        "expectedRound",
+        "rxBytes",
+        "state"
+      ]
+    ]
+  },
+  "KS": {
+    "event": "KEKS_AUTH_STATUS",
+    "variants": [
+      [
+        "authenticated",
+        "bonded",
+        "bondedRaw",
+        "displayType"
+      ]
+    ]
+  },
+  "KT": {
+    "event": "KEKS_PAIRING_CODE_TRIGGER",
+    "variants": [
+      [
+        "source"
+      ]
+    ]
+  },
+  "KU": {
+    "event": "KEKS_AUTH_REPLY_BUFFERED",
+    "variants": [
+      [
+        "reason=\"shared-key-pending\""
+      ]
+    ]
+  },
+  "KV": {
+    "event": "KEKS_AUTH_REPLY_UNHANDLED",
+    "variants": [
+      [
+        "opcode",
+        "bytes"
+      ]
+    ]
+  },
+  "KW": {
+    "event": "KEKS_WAIT",
+    "variants": [
+      [
+        "state",
+        "timeoutMs",
+        "purpose"
+      ]
+    ]
+  },
+  "KX": {
+    "event": "KEKS_CHUNK_LOST",
+    "variants": [
+      [
+        "chunk",
+        "waitedMs",
+        "resend"
+      ]
+    ]
+  },
+  "KY": {
+    "event": "KEKS_ROUND_TRAILING_BYTES",
+    "variants": [
+      [
+        "ignored"
+      ]
+    ]
+  },
+  "KZ": {
+    "event": "KEKS_EXTRADATA_IGNORED",
+    "variants": [
+      [
+        "state",
+        "bytes"
+      ]
+    ]
+  },
+  "LS": {
+    "event": "BLE_CONNECTION_STATE",
+    "variants": [
+      [
+        "name",
+        "state",
+        "connected"
+      ]
+    ]
+  },
+  "MI": {
+    "event": "G7_MESSAGE_IGNORED",
+    "variants": [
+      [
+        "reason=\"session-terminal\"",
+        "state"
+      ],
+      [
+        "reason=\"not-authenticated-and-bonded\""
+      ]
+    ]
+  },
+  "MR": {
+    "event": "G7_MESSAGE_REJECT",
+    "variants": [
+      [
+        "reason=\"empty\""
+      ]
+    ]
+  },
+  "NW": {
+    "event": "SCAN_NEW_DEVICE",
+    "variants": [
+      [
+        "deviceIndex",
+        "name",
+        "rssi"
+      ]
+    ]
+  },
+  "OB": {
+    "event": "SCAN_DEVICE_SEEN",
+    "variants": [
+      [
+        "name",
+        "rssi",
+        "hits"
+      ],
+      [
+        "name",
+        "rssi",
+        "hits",
+        "serviceUuids"
+      ]
+    ]
+  },
+  "PC": {
+    "event": "PAIRING_CODE_SET",
+    "variants": [
+      [
+        "code",
+        "previous",
+        "changed",
+        "savedKeyCleared",
+        "pairingEnabled"
+      ]
+    ]
+  },
+  "PD": {
+    "event": "GATT_PROFILE_REGISTERED",
+    "variants": [
+      [
+        "uuid",
+        "status",
+        "count",
+        "ready"
+      ]
+    ]
+  },
+  "PE": {
+    "event": "PAIRING_CODE_SAVE_FAILED",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "PQ": {
+    "event": "GATT_PROFILE_REGISTER",
+    "variants": [
+      [
+        "requests=\"2\""
+      ]
+    ]
+  },
+  "PS": {
+    "event": "GATT_PROFILE_REGISTER_START",
+    "variants": [
+      [
+        "expected=\"2\"",
+        "timeoutMs=\"10000\""
+      ]
+    ]
+  },
+  "PT": {
+    "event": "GATT_PROFILE_REGISTER_TIMEOUT",
+    "variants": [
+      [
+        "count",
+        "expected=\"2\"",
+        "targetQueued"
+      ]
+    ]
+  },
+  "PX": {
+    "event": "GATT_PROFILE_REGISTER_EXCEPTION",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "PZ": {
+    "event": "GATT_PROFILE_LATE_CALLBACK",
+    "variants": [
+      [
+        "uuid",
+        "status",
+        "ignored=\"true\"",
+        "reason"
+      ]
+    ]
+  },
+  "SA": {
+    "event": "SS_ABORT",
+    "variants": [
+      [
+        "reason=\"already-connected\""
+      ],
+      [
+        "reason=\"no-pairing-code\"",
+        "trigger"
+      ]
+    ]
+  },
+  "SB": {
+    "event": "SCAN_ABORT",
+    "variants": [
+      [
+        "reason=\"sensor-reported-terminal-state\"",
+        "state"
+      ]
+    ]
+  },
+  "SC": {
+    "event": "BLE scan",
+    "variants": [
+      [
+        "state",
+        "status"
+      ]
+    ]
+  },
+  "SE": {
+    "event": "SCAN_G7_SEEN",
+    "variants": [
+      [
+        "name",
+        "rssi",
+        "hits",
+        "matchedBy",
+        "dexcomService",
+        "advertisement"
+      ],
+      [
+        "name",
+        "rssi",
+        "advertisement"
+      ]
+    ]
+  },
+  "SF": {
+    "event": "SAVED_KEY_CERTIFICATES",
+    "variants": [
+      [
+        "connectMs"
+      ]
+    ]
+  },
+  "SG": {
+    "event": "G7_SLOT_POLICY_CHANGE",
+    "variants": [
+      [
+        "policy",
+        "displayType",
+        "reason"
+      ]
+    ]
+  },
+  "SK": {
+    "event": "SAVED_KEY_AUTH_BEGIN",
+    "variants": [
+      [
+        "opcode=\"02\"",
+        "tokenBytes=\"8\"",
+        "slot",
+        "connectMs"
+      ]
+    ]
+  },
+  "SM": {
+    "event": "SAVED_KEY_PROOF",
+    "variants": [
+      [
+        "match"
+      ]
+    ]
+  },
+  "SN": {
+    "event": "SAVED_KEY_AUTH_NOT_BONDED",
+    "variants": [
+      [
+        "bondedRaw",
+        "connectMs"
+      ]
+    ]
+  },
+  "SO": {
+    "event": "G7_SLOT_CHOICE",
+    "variants": [
+      [
+        "choice",
+        "displayType"
+      ],
+      [
+        "choice",
+        "displayType",
+        "reason"
+      ]
+    ]
+  },
+  "SP": {
+    "event": "G7_SLOT_POLICY",
+    "variants": [
+      [
+        "policy",
+        "displayType"
+      ]
+    ]
+  },
+  "SS": {
+    "event": "SCAN_START",
+    "variants": [
+      [
+        "reason",
+        "retry",
+        "duration=\"until-target\""
+      ]
+    ]
+  },
+  "ST": {
+    "event": "SAVED_KEY_AUTH_TIMEOUT",
+    "variants": [
+      [
+        "waitMs",
+        "connectMs"
+      ]
+    ]
+  },
+  "SV": {
+    "event": "SAVED_KEY_AUTH_ABORT",
+    "variants": [
+      [
+        "reason=\"write-queue-full\""
+      ]
+    ]
+  },
+  "SX": {
+    "event": "SAVED_KEY_REFUSED_FOR_WATCH",
+    "variants": [
+      [
+        "keyPrint"
+      ]
+    ]
+  },
+  "SY": {
+    "event": "SCAN_START_EXCEPTION",
+    "variants": [
+      [
+        "error",
+        "retryMs"
+      ]
+    ]
+  },
+  "SZ": {
+    "event": "SCAN_STATE_ERROR",
+    "variants": [
+      [
+        "status",
+        "retryMs"
+      ]
+    ]
+  },
+  "TM": {
+    "event": "G7_SESSION_TERMINAL",
+    "variants": [
+      [
+        "state",
+        "seq",
+        "action=\"mark-inactive-no-restart-no-reconnect\""
+      ]
+    ]
+  },
+  "TS": {
+    "event": "TARGET_SELECTED",
+    "variants": [
+      [
+        "name",
+        "rssi",
+        "action=\"AC\""
+      ]
+    ]
+  },
+  "VH": {
+    "event": "VIEW_HIDDEN",
+    "variants": [
+      [
+        "scanning",
+        "connected"
+      ]
+    ]
+  },
+  "VS": {
+    "event": "VIEW_SHOWN",
+    "variants": [
+      [
+        "scanning",
+        "connected",
+        "retry"
+      ]
+    ]
+  },
+  "WC": {
+    "event": "CCCD_CHARACTERISTIC_MISSING",
+    "variants": [
+      [
+        "channel",
+        "uuid"
+      ]
+    ]
+  },
+  "WL": {
+    "event": "G7_WAKE_LOST",
+    "variants": [
+      [
+        "missed",
+        "next=\"scan-until-seen\""
+      ]
+    ]
+  },
+  "WM": {
+    "event": "CCCD_MISSING",
+    "variants": [
+      [
+        "channel",
+        "uuid"
+      ]
+    ]
+  },
+  "WQ": {
+    "event": "CCCD_WRITE_REQUEST",
+    "variants": [
+      [
+        "channel",
+        "error"
+      ]
+    ]
+  },
+  "WR": {
+    "event": "CCCD_WRITE_RESULT",
+    "variants": [
+      [
+        "channel",
+        "status"
+      ]
+    ]
+  },
+  "WW": {
+    "event": "G7_WAKE_WAIT",
+    "variants": [
+      [
+        "scanInMs",
+        "sinceWakeMs",
+        "missed"
+      ]
+    ]
+  },
+  "WX": {
+    "event": "CCCD_WRITE_EXCEPTION",
+    "variants": [
+      [
+        "channel",
+        "error"
+      ]
+    ]
+  },
+  "XA": {
+    "event": "CRYPTO_AES_EXCEPTION",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "XI": {
+    "event": "G7_EXTRADATA_INDICATION",
+    "variants": [
+      [
+        "bytes",
+        "state"
+      ]
+    ]
+  },
+  "XS": {
+    "event": "CRYPTO_SHA_EXCEPTION",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  }
+}
