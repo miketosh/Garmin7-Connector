@@ -1,0 +1,14 @@
+logs/
+CIQ_LOG.TXT
+CIQ_LOG.YML
+CIQ_LOG*.TXT
+CIQ_LOG*.YML
+*.decoded.txt
+*.btsnoop
+*.pcap
+*.pcapng
+build/
+dist/
+*.prg
+*.iq
+.secrets/
