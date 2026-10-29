@@ -10,7 +10,7 @@ on:
     types: [published]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   host-tests:
@@ -45,8 +45,8 @@ jobs:
           set -euo pipefail
           mkdir -p build
           # The container supplies the Connect IQ SDK/compiler and Fenix 7 /
-          # Forerunner 255 device definitions. The temporary developer key is
-          # for side-loaded testing only; it is not a persistent/store key.
+          # Forerunner 255 device definitions. This temporary key is for
+          # side-loaded testing only; it is not a persistent/store key.
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/app" \
             -w /app \
@@ -73,8 +73,20 @@ jobs:
           path: build/Garmin7-Connector-*.prg
           if-no-files-found: error
           retention-days: 30
-      - name: Attach PRGs to GitHub release
-        if: github.event_name == 'release'
+
+  publish-release:
+    name: Attach PRGs to GitHub release
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    needs: compile
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Garmin7-Connector-PRG
+          path: build
+      - name: Attach PRGs to release
         uses: softprops/action-gh-release@v2
         with:
           files: build/Garmin7-Connector-*.prg
