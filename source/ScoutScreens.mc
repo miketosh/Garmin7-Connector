@@ -40,7 +40,6 @@ module ScoutScreens {
     function pushMenu() {
         var menu = new WatchUi.Menu2({ :title => "G7 Scout" });
         menu.addItem(new WatchUi.MenuItem("Pairing code", codeSubLabel(), :code, null));
-        menu.addItem(new WatchUi.MenuItem("Collector", ScoutCollector.label(), :collector, null));
         menu.addItem(new WatchUi.MenuItem("Debug info", null, :debug, null));
         menu.addItem(new WatchUi.MenuItem("Status", null, :status, null));
         push(menu, new ScoutMenuDelegate(), WatchUi.SLIDE_UP);
@@ -72,7 +71,6 @@ module ScoutScreens {
             ["Last BG", ScoutView.glucoseHasValue ? ScoutView.glucoseValue + " mg/dL" : "--"],
             ["Sensor", ScoutView.targetBound ? ScoutView.targetName : "not bound"],
             ["Code", codeSubLabel()],
-            ["Collector", ScoutCollector.label() + " (" + ScoutCollector.lastResult + ")"],
             ["Connects", "" + ScoutView.connectionAttemptNumber],
             ["Watch battery", System.getSystemStats().battery.toNumber() + "%"],
             ["Sensor age", sensorAgeText()],
@@ -102,10 +100,6 @@ class ScoutMenuDelegate extends WatchUi.Menu2InputDelegate {
         if (id == :code) {
             var view = new ScoutCodeView();
             ScoutScreens.push(view, new ScoutCodeDelegate(view, item), WatchUi.SLIDE_LEFT);
-        } else if (id == :collector) {
-
-            ScoutCollector.toggle();
-            item.setSubLabel(ScoutCollector.label());
         } else if (id == :debug) {
             var view = new ScoutListView("DEBUG", :debug);
             ScoutScreens.push(view, new ScoutListDelegate(view), WatchUi.SLIDE_LEFT);
