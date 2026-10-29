@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = (ROOT / "source" / "ScoutApp.mc").read_text(encoding="utf-8")
 SCREENS = (ROOT / "source" / "ScoutScreens.mc").read_text(encoding="utf-8")
 LOG = (ROOT / "source" / "ScoutLog.mc").read_text(encoding="utf-8")
+QR = (ROOT / "source" / "KeksQrMaterial.mc").read_text(encoding="utf-8")
 
 
 class PublicCleanlinessTests(unittest.TestCase):
@@ -22,6 +23,11 @@ class PublicCleanlinessTests(unittest.TestCase):
     def test_pairing_code_is_not_written_to_diagnostics(self):
         self.assertNotIn('noteDebug("CODE SET " + code)', APP)
         self.assertNotIn('ScoutLog.println("PC" + code', APP)
+
+    def test_generated_qr_key_material_is_not_committed(self):
+        self.assertIn("return []b;", QR)
+        self.assertEqual(3, QR.count("return []b;"))
+        self.assertNotIn("0x", QR)
 
     def test_glucose_payload_is_not_written_to_diagnostics(self):
         match = re.search(r'ScoutLog\.println\("GL"[^;]+;', APP)
