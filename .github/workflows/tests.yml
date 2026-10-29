@@ -4,7 +4,23 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    # Docs and uploaded logs do not affect the app binary. Keep build inputs
+    # (source, tools, tests, resources, manifest, and project configuration)
+    # in scope so changes that can affect the build still run CI.
+    paths-ignore:
+      - 'docs/**'
+      - 'logs/**'
+      - '**/*.md'
+      - '*.md'
+      - '**/*.log'
   pull_request:
+    # Match the push behavior so documentation-only PRs don't start a build.
+    paths-ignore:
+      - 'docs/**'
+      - 'logs/**'
+      - '**/*.md'
+      - '*.md'
+      - '**/*.log'
   workflow_dispatch:
   release:
     types: [published]
