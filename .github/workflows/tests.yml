@@ -27,7 +27,7 @@ jobs:
         run: python -m unittest discover -s tools -p 'test_*.py'
 
   compile:
-    name: Compile signed PRGs
+    name: Compile multi-device package and PRGs
     runs-on: ubuntu-latest
     needs: host-tests
     steps:
@@ -39,14 +39,14 @@ jobs:
         run: python -m pip install -r tools/requirements-keks-inspector.txt
       - name: Generate validated xDrip G7 KEKS source for this build
         run: python tools/embed_g7_keks_qr.py
-      - name: Compile representative watch targets
+      - name: Compile multi-device package and device-targeted PRGs
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p build
-          # The container supplies the Connect IQ SDK/compiler and Fenix 7 /
-          # Forerunner 255 device definitions. This temporary key is for
-          # side-loaded testing only; it is not a persistent/store key.
+          # The container supplies Connect IQ SDK 9.2.0 and device definitions.
+          # Use the absolute compiler path because login-shell PATH handling can
+          # otherwise make subsequent compiler calls fail after the package build.
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/app" \
             -w /app \
@@ -54,26 +54,26 @@ jobs:
             ghcr.io/matco/connectiq-tester:latest \
             -lc '
               set -euo pipefail
+              MONKEYC=/connectiq/bin/monkeyc
+              test -x "$MONKEYC"
               openssl genrsa -out /tmp/ciq-key.pem 4096 >/dev/null 2>&1
               openssl pkcs8 -topk8 -inform PEM -outform DER \
                 -in /tmp/ciq-key.pem -out /tmp/ciq-key.der -nocrypt
-              # Build the multi-product Connect IQ package for every product
-              # declared in manifest.xml. This is the portable package for
-              # the complete supported-device list.
-              monkeyc -e -f monkey.jungle \
+
+              # One multi-product .iq package includes all manifest products.
+              "$MONKEYC" -e -f monkey.jungle \
                 -o build/Garmin7-Connector.iq \
                 -y /tmp/ciq-key.der
               test -s build/Garmin7-Connector.iq
 
-              # Also provide directly sideloadable PRGs for every manifest
-              # product supported by this SDK image. Keep per-device failures
-              # visible, but don't discard the multi-product package because
-              # one optional target isn't available in the image.
+              # Also generate individually sideloadable PRGs where the SDK
+              # supports the manifest product IDs. The .iq package remains
+              # the primary broad-compatibility artifact.
               grep -oE '<iq:product id="[^"]+"/' manifest.xml \
                 | sed -E 's/.*id="([^"]+)".*/\1/' \
                 | while read -r device; do
                     echo "Compiling target: $device"
-                    if monkeyc -f monkey.jungle -d "$device" \
+                    if "$MONKEYC" -f monkey.jungle -d "$device" \
                         -o "build/Garmin7-Connector-$device.prg" \
                         -y /tmp/ciq-key.der; then
                       test -s "build/Garmin7-Connector-$device.prg"
@@ -81,13 +81,13 @@ jobs:
                       echo "WARNING: target $device is not buildable in this SDK image; see compiler output." >&2
                     fi
                   done
-              test -n "$(find build -maxdepth 1 -name 'Garmin7-Connector-*.prg' -type f -size +0c -print -quit)"
+              test -n "$(find build -maxdepth 1 -name "Garmin7-Connector-*.prg" -type f -size +0c -print -quit)"
               rm -f /tmp/ciq-key.pem /tmp/ciq-key.der
             '
-      - name: Upload PRG build artifacts
+      - name: Upload multi-device build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Garmin7-Connector-PRG
+          name: Garmin7-Connector-build
           path: |
             build/Garmin7-Connector.iq
             build/Garmin7-Connector-*.prg
@@ -95,7 +95,7 @@ jobs:
           retention-days: 30
 
   publish-release:
-    name: Attach PRGs to GitHub release
+    name: Attach build artifacts to GitHub release
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     needs: compile
@@ -104,9 +104,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Garmin7-Connector-PRG
+          name: Garmin7-Connector-build
           path: build
-      - name: Attach PRGs to release
+      - name: Attach build artifacts to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
