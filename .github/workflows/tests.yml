@@ -57,20 +57,40 @@ jobs:
               openssl genrsa -out /tmp/ciq-key.pem 4096 >/dev/null 2>&1
               openssl pkcs8 -topk8 -inform PEM -outform DER \
                 -in /tmp/ciq-key.pem -out /tmp/ciq-key.der -nocrypt
-              for device in fenix7 fr255; do
-                echo "Compiling target: $device"
-                monkeyc -f monkey.jungle -d "$device" \
-                  -o "build/Garmin7-Connector-$device.prg" \
-                  -y /tmp/ciq-key.der
-                test -s "build/Garmin7-Connector-$device.prg"
-              done
+              # Build the multi-product Connect IQ package for every product
+              # declared in manifest.xml. This is the portable package for
+              # the complete supported-device list.
+              monkeyc -e -f monkey.jungle \
+                -o build/Garmin7-Connector.iq \
+                -y /tmp/ciq-key.der
+              test -s build/Garmin7-Connector.iq
+
+              # Also provide directly sideloadable PRGs for every manifest
+              # product supported by this SDK image. Keep per-device failures
+              # visible, but don't discard the multi-product package because
+              # one optional target isn't available in the image.
+              grep -oE '<iq:product id="[^"]+"/' manifest.xml \
+                | sed -E 's/.*id="([^"]+)".*/\1/' \
+                | while read -r device; do
+                    echo "Compiling target: $device"
+                    if monkeyc -f monkey.jungle -d "$device" \
+                        -o "build/Garmin7-Connector-$device.prg" \
+                        -y /tmp/ciq-key.der; then
+                      test -s "build/Garmin7-Connector-$device.prg"
+                    else
+                      echo "WARNING: target $device is not buildable in this SDK image; see compiler output." >&2
+                    fi
+                  done
+              test -n "$(find build -maxdepth 1 -name 'Garmin7-Connector-*.prg' -type f -size +0c -print -quit)"
               rm -f /tmp/ciq-key.pem /tmp/ciq-key.der
             '
       - name: Upload PRG build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Garmin7-Connector-PRG
-          path: build/Garmin7-Connector-*.prg
+          path: |
+            build/Garmin7-Connector.iq
+            build/Garmin7-Connector-*.prg
           if-no-files-found: error
           retention-days: 30
 
@@ -89,4 +109,6 @@ jobs:
       - name: Attach PRGs to release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/Garmin7-Connector-*.prg
+          files: |
+            build/Garmin7-Connector.iq
+            build/Garmin7-Connector-*.prg
