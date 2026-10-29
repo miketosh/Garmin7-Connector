@@ -1184,6 +1184,24 @@ class ScoutView extends WatchUi.View {
         }
     }
 
+    // Compare names using temporary uppercase values, but never persist the
+    // normalized form. Sensor spelling is retained in all stored name fields.
+    static function namesMatch(left, right) {
+        return left != null && right != null && left.toUpper().equals(right.toUpper());
+    }
+
+    static function nameIndexOf(names, candidateName) {
+        for (var i = 0; i < names.size(); i += 1) {
+            if (namesMatch(names[i], candidateName)) { return i; }
+        }
+        return -1;
+    }
+
+    static function removeName(names, candidateName) {
+        var index = nameIndexOf(names, candidateName);
+        if (index >= 0) { names.remove(names[index]); }
+    }
+
     static function loadTargetBinding() {
         var stored = null;
         try { stored = Application.Storage.getValue("g7DeviceName"); } catch (e) { stored = null; }
@@ -1256,8 +1274,8 @@ class ScoutView extends WatchUi.View {
             }
             return;
         }
-        if (seenCandidates.indexOf(upper) < 0) {
-            seenCandidates.add(upper);
+        if (nameIndexOf(seenCandidates, name) < 0) {
+            seenCandidates.add(name);
             saveSeenNames();
         }
 
@@ -1266,7 +1284,7 @@ class ScoutView extends WatchUi.View {
 
 
 
-        if (keyName.length() == 0 && upper.equals(lastTriedName) && (seenCandidates.size() > 1 || !lookedForOthers)) {
+        if (keyName.length() == 0 && namesMatch(name, lastTriedName) && (seenCandidates.size() > 1 || !lookedForOthers)) {
 
 
 
@@ -1279,8 +1297,8 @@ class ScoutView extends WatchUi.View {
             if (seenCandidates.size() == 1) { lookedForOthers = true; }
         }
         passedOverMs = null;
-        lastTriedName = upper;
-        try { Application.Storage.setValue("g7LastTriedName", upper); } catch (e) { }
+        lastTriedName = name;
+        try { Application.Storage.setValue("g7LastTriedName", name); } catch (e) { }
         targetName = name;
         TARGET_NAME_UPPER = upper;
         ScoutLog.println("DC");
@@ -1318,19 +1336,19 @@ class ScoutView extends WatchUi.View {
         return wrongNames[1];
     }
 
-    static function isWrongName(upper) {
-        return wrongNameList().indexOf(upper) >= 0;
+    static function isWrongName(candidateName) {
+        return nameIndexOf(wrongNameList(), candidateName) >= 0;
     }
 
 
     static function markWrongName() {
         if (targetBound || TARGET_NAME_UPPER.length() == 0) { return; }
         var list = wrongNameList();
-        if (list.indexOf(TARGET_NAME_UPPER) < 0) {
-            list.add(TARGET_NAME_UPPER);
+        if (nameIndexOf(list, targetName) < 0) {
+            list.add(targetName);
             try { Application.Storage.setValue(WRONG_NAMES_KEY, wrongNames); } catch (e) { }
         }
-        seenCandidates.remove(TARGET_NAME_UPPER);
+        removeName(seenCandidates, targetName);
         saveSeenNames();
         ScoutLog.println("DN:" + list.size());
         noteDebug("NOT " + targetName);
@@ -1596,10 +1614,13 @@ class ScoutView extends WatchUi.View {
 
 
     static function onBoundScanResult(scanResult, name) {
-        if (name == null || name.length() != TARGET_NAME_UPPER.length() ||
-            !name.toUpper().equals(TARGET_NAME_UPPER)) {
+        if (name == null || !namesMatch(name, targetName)) {
             return;
         }
+        // Refresh the original advertised spelling; bindTargetDevice persists
+        // it only after the sensor accepts the connection.
+        targetName = name;
+        TARGET_NAME_UPPER = name.toUpper();
         var rssi = scanResult.getRssi();
         if (targetScanResult != null) {
             targetRssi = rssi;
