@@ -12,4 +12,4 @@ Run host-side regression tests with:
 python -m unittest tools.test_keks_round_ack tools.test_gatt_subscriptions tools.test_keks_engine_vectors
 ```
 
-These tests do not prove real BLE pairing. Current targets include Forerunner 255/255 Music, 265/955/965, Fenix 7/7S/7X, and Epix Gen 2. Confirm product IDs against the installed SDK before adding more devices. Each model needs compilation and physical validation.
+These tests do not prove real BLE pairing. The manifest includes a broad set of targets, including Forerunner 165/170/255/265/570/955/965/970, Fenix 7/8/9 variants, Fenix E, Epix Gen 2/Pro, Enduro 3, Instinct 3, Venu 3/4, and vívoactive 5/6. Confirm product IDs against the installed SDK before adding more devices. Each model needs compilation and physical validation.
