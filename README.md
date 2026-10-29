@@ -54,3 +54,21 @@ The app must not issue sensor session-start, session-stop, or reset commands. A 
 ## License status
 
 No license has been selected yet. Please do not assume this repository grants broad permission to redistribute or reuse the code. The maintainer should choose a license before accepting outside contributions for ongoing distribution.
+
+## Reading diagnostic logs
+
+Compact watch logs can be expanded locally with the included PowerShell decoder. It replaces two-character event codes with readable event names, labels fields, expands boolean values, and reconstructs clock times from the log's timer deltas. It does not upload the log or contact a service.
+
+From the repository root, run in Windows PowerShell 5.1 or PowerShell 7:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\\decode_watch_log.ps1 -Path .\\path\\to\\watch-log.txt
+```
+
+To save a decoded copy instead of printing it to the console:
+
+```powershell
+pwsh tools/decode_watch_log.ps1 -Path .\\path\\to\\watch-log.txt -OutFile .\\watch-log.decoded.txt
+```
+
+The original input is not modified. Older long-format log lines and unrecognized event codes are preserved rather than discarded. Review and sanitize decoded output before sharing: diagnostic logs may contain device names, raw advertisement bytes, and glucose values.
