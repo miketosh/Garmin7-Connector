@@ -23,14 +23,14 @@ This is a **community testing project**, not a medical device. It is not validat
 
 ## Build and test
 
-The project uses Monkey C and the Garmin Connect IQ SDK. Host-side tests are in `tools/`; simulator code is under `sim/` and `test/`. Start with:
+The project uses Monkey C and the Garmin Connect IQ SDK. GitHub Actions runs host-side regression tests, fetches and validates the public xDrip G7 KEKS setup-QR material, generates the required Monkey C source only in the temporary build workspace, and compiles signed side-loadable `.prg` files for Fēnix 7 and Forerunner 255 targets. On a GitHub Release, those PRGs are attached as downloadable release assets. Pull-request and branch builds publish the PRGs as a 30-day Actions artifact. The workflow uses a temporary signing key for testing; it is not a persistent Connect IQ Store signing identity. The QR identity is embedded in the resulting binary, so the binary contains the same protocol setup material sourced from xDrip's published QR. This is not proof the sensor still accepts that identity.
 
 ```sh
 python -m unittest discover -s tools -p 'test_*.py'
 python tools/test_no_stop_session.py
 ```
 
-A passing host test suite or compile is not proof that the sensor accepted the handshake. The public CI workflow will validate host-side code; a signed watch build requires maintainer-controlled signing credentials.
+A passing host test suite or compile is not proof that the sensor accepted the handshake. The public CI workflow validates the code and compiles real PRG outputs for the two listed build targets. The current release outputs are `Garmin7-Connector-fenix7.prg` and `Garmin7-Connector-fr255.prg`; use the matching target for your watch. Other manifest targets are not yet all built by CI and may need a local per-device build.
 
 ## Reporting a test
 
