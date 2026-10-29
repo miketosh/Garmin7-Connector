@@ -1,0 +1,5 @@
+<settings>
+    <setting propertyKey="@Properties.savedAuthKeyHex" title="@Strings.SavedAuthKeyTitle">
+        <settingConfig type="alphaNumeric"/>
+    </setting>
+</settings>

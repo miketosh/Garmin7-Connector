@@ -1,0 +1,5 @@
+<strings>
+    <string id="AppName">Garmin7 Connector</string>
+    <string id="SavedAuthKeyTitle">Saved G7 authentication key</string>
+    <string id="GlucoseComplicationTitle">G7 Glucose</string>
+</strings>

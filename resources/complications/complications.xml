@@ -1,0 +1,3 @@
+<complications>
+    <complication id="G7ScoutGlucose" type="number" title="@Strings.GlucoseComplicationTitle"/>
+</complications>
