@@ -1,11 +1,13 @@
 
-"""Embed the public xDrip G7 KEKS setup-QR identity into the CI build.
+"""Embed the public xDrip G7 KEKS setup-QR identity into a build.
 
-The decoded certificate/key bytes are written only to the generated Monkey C
-source in the ephemeral build workspace. Never print them or commit the
-generated source. The upstream QR is public, but its third field is a private
-signing key used by the protocol, so keep generated build artifacts restricted
-to the intended test audience.
+The decoded certificate/key bytes are written only to generated Monkey C
+source in the build workspace. Never print the raw values or commit generated
+source. The upstream QR is publicly available, but its third field is a private
+signing key used by the protocol; the compiled PRG necessarily embeds this
+material. Anyone distributing a PRG must understand that consequence and check
+the upstream project's terms/permission. The consistency checks do not prove
+that a sensor still accepts this identity.
 """
 from __future__ import annotations
 
