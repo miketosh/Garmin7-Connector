@@ -1,0 +1,22 @@
+
+
+
+
+class ScoutKeksQrMaterial {
+    static function filler(seed) {
+        var out = new [200]b;
+        for (var i = 0; i < 200; i += 1) { out[i] = (i * seed + 11) & 0xFF; }
+        return out;
+    }
+
+    static function partA() { return filler(3); }
+    static function partB() { return filler(5); }
+
+    static function partC() {
+        var out = [0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2A, 0x86, 0x48,
+            0xCE, 0x3D, 0x02, 0x01, 0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03,
+            0x01, 0x07, 0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20]b;
+        out.addAll(ScoutSimSensor.hexBytes(KeksEngineVectors.SIG_D));
+        return out;
+    }
+}
