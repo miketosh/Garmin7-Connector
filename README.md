@@ -75,3 +75,9 @@ pwsh tools/decode_watch_log.ps1 -Path .\path\to\watch-log.txt -OutFile .\watch-l
 ```
 
 The original input is not modified. Older long-format log lines and unrecognized event codes are preserved rather than discarded. Review and sanitize decoded output before sharing: diagnostic logs may contain device names, raw advertisement bytes, and glucose values.
+
+
+## Documentation
+
+- [Tools README](tools/README.md) — how to decode watch TXT logs locally, command options, and privacy guidance.
+- [Log record code reference](docs/LOG_CODES.md) — public event-code mappings and field layouts.
