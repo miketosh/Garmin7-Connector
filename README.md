@@ -1,6 +1,6 @@
 # Garmin7-Connector
 
-Experimental direct Bluetooth Low Energy (BLE) connection research for Dexcom G7 sensors on compatible Garmin Connect IQ watches. The manifest now lists a broad set of newer Forerunner, Fenix 7/8/9, Epix, Enduro, Instinct, Venu, and vívoactive targets; model-by-model compilation and physical validation remain necessary.
+Experimental direct Bluetooth Low Energy (BLE) connection research for Dexcom G7 sensors on compatible Garmin Connect IQ watches. The manifest lists a broad set of newer Forerunner, Fēnix 7/8/9, Epix, Enduro, Instinct, Venu, and vívoactive targets. The CI workflow exports a multi-product `.iq` package for the manifest and attempts a device-specific `.prg` for every product ID using the SDK image. Targets unavailable in that image are reported as warnings; physical validation remains necessary.
 
 This is a **community testing project**, not a medical device. It is not validated for treatment decisions. Do not use it as a replacement for your prescribed CGM display, alerts, or medical advice.
 
@@ -23,14 +23,14 @@ This is a **community testing project**, not a medical device. It is not validat
 
 ## Build and test
 
-The project uses Monkey C and the Garmin Connect IQ SDK. GitHub Actions runs host-side regression tests, fetches and validates the public xDrip G7 KEKS setup-QR material, generates the required Monkey C source only in the temporary build workspace, and compiles signed side-loadable `.prg` files for Fēnix 7 and Forerunner 255 targets. On a GitHub Release, those PRGs are attached as downloadable release assets. Pull-request and branch builds publish the PRGs as a 30-day Actions artifact. The workflow uses a temporary signing key for testing; it is not a persistent Connect IQ Store signing identity. The QR identity is embedded in the resulting binary, so the binary contains the same protocol setup material sourced from xDrip's published QR. This is not proof the sensor still accepts that identity.
+The project uses Monkey C and the Garmin Connect IQ SDK. GitHub Actions runs host-side regression tests, fetches and validates the public xDrip G7 KEKS setup-QR material, generates the required Monkey C source only in the temporary build workspace, exports a multi-product `.iq` package from the manifest, and attempts side-loadable `.prg` builds for all manifest product IDs supported by the SDK image. On a GitHub Release, the `.iq` package and successful PRGs are attached as downloadable release assets. Pull-request and branch builds publish them as a 30-day Actions artifact. The workflow uses a temporary signing key for testing; it is not a persistent Connect IQ Store signing identity. The QR identity is embedded in the resulting binary, so the binary contains the same protocol setup material sourced from xDrip's published QR. This is not proof the sensor still accepts that identity.
 
 ```sh
 python -m unittest discover -s tools -p 'test_*.py'
 python tools/test_no_stop_session.py
 ```
 
-A passing host test suite or compile is not proof that the sensor accepted the handshake. The public CI workflow validates the code and compiles real PRG outputs for the two listed build targets. The current release outputs are `Garmin7-Connector-fenix7.prg` and `Garmin7-Connector-fr255.prg`; use the matching target for your watch. Other manifest targets are not yet all built by CI and may need a local per-device build.
+A passing host test suite or compile is not proof that the sensor accepted the handshake. Use the device-specific PRG matching your watch when one is available. The `.iq` package is the multi-product Connect IQ export; a `.prg` is a device-targeted sideloadable build. Review the workflow summary/log for target-specific failures before assuming every manifest product received a PRG.
 
 ## Reporting a test
 
