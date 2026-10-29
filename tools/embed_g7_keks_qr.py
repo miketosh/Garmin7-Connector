@@ -12,6 +12,8 @@ that a sensor still accepts this identity.
 from __future__ import annotations
 
 import sys
+import io
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from inspect_g7_keks_qr import (
@@ -79,7 +81,13 @@ def main():
         parts = load_official_parts()
 
 
-        if inspect_parts(parts) != 0:
+        # Validate the certificate/key relationships quietly in CI. The
+        # certificate's X.509 validity date is known/expected and is not a
+        # useful build warning; keep the full report available in the manual
+        # inspector tool, but do not repeat it during every build.
+        with redirect_stdout(io.StringIO()):
+            inspection_result = inspect_parts(parts)
+        if inspection_result != 0:
             raise InspectError("Official QR certificate/key consistency validation failed.")
         generated = render_source(parts)
         OUTPUT.write_text(generated, encoding="utf-8")
