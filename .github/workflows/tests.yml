@@ -8,4 +8,4 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest tools.test_keks_round_ack tools.test_gatt_subscriptions tools.test_keks_engine_vectors tools.test_public_cleanliness
+      - run: python -m unittest discover -s tools -p 'test_*.py'
