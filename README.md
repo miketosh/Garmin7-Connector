@@ -1,6 +1,6 @@
 # Garmin7-Connector
 
-Experimental direct Bluetooth Low Energy (BLE) connection research for Dexcom G7 sensors on Garmin Forerunner 255 and Forerunner 255 Music watches.
+Experimental direct Bluetooth Low Energy (BLE) connection research for Dexcom G7 sensors on compatible Garmin Connect IQ watches. The initial device list is being expanded beyond Forerunner 255 to include Fenix-family testers.
 
 This is a **community testing project**, not a medical device. It is not validated for treatment decisions. Do not use it as a replacement for your prescribed CGM display, alerts, or medical advice.
 
@@ -14,7 +14,7 @@ This is a **community testing project**, not a medical device. It is not validat
 
 ## Before testing
 
-1. Confirm your watch is a Forerunner 255 or Forerunner 255 Music.
+1. Confirm your watch model is listed in `manifest.xml`. The project is intended to support compatible BLE-capable Connect IQ watches, including Fenix models, but each model still needs compile and physical-device validation.
 2. Build the app using the Garmin Connect IQ SDK and your own developer signing key.
 3. Install it using Garmin's supported developer workflow.
 4. Open the app and enter **your own sensor's four-digit pairing code** in the pairing-code menu. The default is `----`, which disables pairing until you enter a code.
