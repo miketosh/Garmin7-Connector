@@ -1,3 +1,9 @@
 <complications>
-    <complication id="G7ScoutGlucose" type="number" title="@Strings.GlucoseComplicationTitle"/>
+    <complication id="0"
+                   access="public"
+                   longLabel="@Strings.GlucoseComplicationTitle"
+                   shortLabel="G7"
+                   icon="@Drawables.GlucoseComplicationIcon">
+        <faceIt defaultText="@Strings.GlucoseComplicationTitle" />
+    </complication>
 </complications>
