@@ -65,13 +65,13 @@ Compact watch logs can be expanded locally with the included PowerShell decoder.
 From the repository root, run in Windows PowerShell 5.1 or PowerShell 7:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\\decode_watch_log.ps1 -Path .\\path\\to\\watch-log.txt
+powershell -ExecutionPolicy Bypass -File tools\decode_watch_log.ps1 -Path .\path\to\watch-log.txt
 ```
 
 To save a decoded copy instead of printing it to the console:
 
 ```powershell
-pwsh tools/decode_watch_log.ps1 -Path .\\path\\to\\watch-log.txt -OutFile .\\watch-log.decoded.txt
+pwsh tools/decode_watch_log.ps1 -Path .\path\to\watch-log.txt -OutFile .\watch-log.decoded.txt
 ```
 
 The original input is not modified. Older long-format log lines and unrecognized event codes are preserved rather than discarded. Review and sanitize decoded output before sharing: diagnostic logs may contain device names, raw advertisement bytes, and glucose values.
