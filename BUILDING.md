@@ -4,7 +4,13 @@ Requirements: Garmin Connect IQ SDK/Monkey C, Python 3.10+, and your own Garmin 
 
 The repository keeps generated KEKS material out of version control. Install dependencies with `python -m pip install -r tools/requirements-keks-inspector.txt`, then run `python tools/embed_g7_keks_qr.py` to generate `source/KeksQrMaterial.mc` locally. Do not commit the generated file or publish artifacts containing it without reviewing licensing and redistribution constraints.
 
-Compile with the SDK installed locally and select a device ID listed in `manifest.xml`. The exact command depends on the SDK version.
+Compile with the SDK installed locally and select a device ID listed in `manifest.xml`. With the SDK's `bin` directory on `PATH`, for example:
+
+```sh
+monkeyc -f monkey.jungle -o build/Garmin7-Connector.prg -d fenix7 -y path/to/your/developer_key.der
+```
+
+Change `-d fenix7` to the model you are building for. The signing key is your own local developer key; never add it to this repository. This command creates the output under `build/`, which is ignored by Git.
 
 Run host-side regression tests with:
 
