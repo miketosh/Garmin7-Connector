@@ -1,6 +1,6 @@
 # Garmin7-Connector
 
-Experimental direct Bluetooth Low Energy (BLE) connection research for Dexcom G7 sensors on compatible Garmin Connect IQ watches. The initial device list is being expanded beyond Forerunner 255 to include Fenix-family testers.
+Experimental direct Bluetooth Low Energy (BLE) connection research for Dexcom G7 sensors on compatible Garmin Connect IQ watches. The manifest now lists a broad set of newer Forerunner, Fenix 7/8/9, Epix, Enduro, Instinct, Venu, and vívoactive targets; model-by-model compilation and physical validation remain necessary.
 
 This is a **community testing project**, not a medical device. It is not validated for treatment decisions. Do not use it as a replacement for your prescribed CGM display, alerts, or medical advice.
 
