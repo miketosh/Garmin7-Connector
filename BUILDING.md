@@ -2,9 +2,9 @@
 
 Requirements: Garmin Connect IQ SDK/Monkey C, Python 3.10+, and your own Garmin developer signing key.
 
-The repository keeps generated KEKS material out of version control. Install dependencies with `python -m pip install -r tools/requirements-keks-inspector.txt`, then run `python tools/embed_g7_keks_qr.py` to generate `source/KeksQrMaterial.mc` locally. Do not commit the generated file or publish artifacts containing it without reviewing licensing and redistribution constraints.
+The repository keeps generated KEKS material out of version control. Install dependencies with `python -m pip install -r tools/requirements-keks-inspector.txt`, then run `python tools/embed_g7_keks_qr.py` to generate `source/KeksQrMaterial.mc` locally. GitHub Actions does the same in its temporary workspace before compiling. The generated source is not committed, but the resulting PRG necessarily embeds these bytes. The workflow uses the three values from xDrip's published G7 setup QR and validates their certificate/key consistency; it does not prove the sensor still accepts the identity. Review the upstream project's terms and suitability before redistributing builds.
 
-Compile with the SDK installed locally and select a device ID listed in `manifest.xml`. With the SDK's `bin` directory on `PATH`, for example:
+Compile with the SDK installed locally and select a device ID listed in `manifest.xml`. The GitHub Actions workflow currently publishes side-loadable PRGs for `fenix7` and `fr255` targets, with a temporary CI-only signing key. For a local build, use your own developer signing key. With the SDK's `bin` directory on `PATH`, for example:
 
 ```sh
 monkeyc -f monkey.jungle -o build/Garmin7-Connector.prg -d fenix7 -y path/to/your/developer_key.der
