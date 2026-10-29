@@ -40,8 +40,8 @@ module ScoutScreens {
     function pushMenu() {
         var menu = new WatchUi.Menu2({ :title => "G7 Scout" });
         menu.addItem(new WatchUi.MenuItem("Pairing code", codeSubLabel(), :code, null));
-        menu.addItem(new WatchUi.MenuItem("Debug info", null, :debug, null));
         menu.addItem(new WatchUi.MenuItem("Status", null, :status, null));
+        menu.addItem(new WatchUi.MenuItem("Debug info", null, :debug, null));
         push(menu, new ScoutMenuDelegate(), WatchUi.SLIDE_UP);
     }
 
