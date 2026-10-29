@@ -57,6 +57,9 @@ No license has been selected yet. Please do not assume this repository grants br
 
 ## Reading diagnostic logs
 
+For detailed usage, options, and troubleshooting, see the [tools README](tools/README.md) and [event-code reference](docs/LOG_CODES.md).
+
+
 Compact watch logs can be expanded locally with the included PowerShell decoder. It replaces two-character event codes with readable event names, labels fields, expands boolean values, and reconstructs clock times from the log's timer deltas. It does not upload the log or contact a service.
 
 From the repository root, run in Windows PowerShell 5.1 or PowerShell 7:
