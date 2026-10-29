@@ -81,3 +81,8 @@ The original input is not modified. Older long-format log lines and unrecognized
 
 - [Tools README](tools/README.md) — how to decode watch TXT logs locally, command options, and privacy guidance.
 - [Log record code reference](docs/LOG_CODES.md) — public event-code mappings and field layouts.
+
+
+## Sensor-name matching
+
+Advertised G7 names are compared case-insensitively so a change in Bluetooth name capitalization does not create a second logical sensor. The app preserves the original spelling received from the advertisement when saving `g7DeviceName`, `g7LastTriedName`, `g7SeenNames`, and wrong-name entries. Uppercase strings are temporary comparison keys only. When a previously bound sensor is seen again, its current advertised spelling is refreshed and persisted after the sensor accepts the connection.
