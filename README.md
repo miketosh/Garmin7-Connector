@@ -50,3 +50,7 @@ Pull requests are welcome. Keep changes focused and include tests for protocol-s
 ## Safety and scope
 
 The app must not issue sensor session-start, session-stop, or reset commands. A missing or stale reading must not be presented as current. The project is experimental and may fail to pair, disconnect, or display no reading.
+
+## License status
+
+No license has been selected yet. Please do not assume this repository grants broad permission to redistribute or reuse the code. The maintainer should choose a license before accepting outside contributions for ongoing distribution.
