@@ -78,10 +78,13 @@ class KeksRoundAckRegressionTests(unittest.TestCase):
         method = source[start:end]
 
         stamp = method.index("keksRoundAckAtMs = System.getTimer();")
-        matched = method.index("if (matched && freshKeksState.equals(\"WAIT_ROUND1\"))")
-        ack_log = method.index('ScoutLog.println("KR" + matched')
+        matched = method.index("if (matched) {")
+        deferred = method.index("keksDeferredAck = [value.size(), ackStatus, ackRound")
         self.assertLess(matched, stamp)
-        self.assertLess(stamp, ack_log)
+        self.assertLess(stamp, deferred)
+        # Iteration 61: a matched mid-frame ack is logged with the frame.
+        frame_log = source[source.index("static function logRoundFrame(roundState)"):]
+        self.assertIn('ScoutLog.println("KR" + true', frame_log)
         self.assertIn("value.size() == 3 && ackStatus == 0 && ackRound == expectedRound", method)
         self.assertIn("keksRoundAckAtMs = -1;", source)
 

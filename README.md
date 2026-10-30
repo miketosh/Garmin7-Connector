@@ -7,9 +7,10 @@ This is a **community testing project**, not a medical device. It is not validat
 ## Current status
 
 - Fresh KEKS pairing and authentication are experimental.
+- Experimental pairing timing (2026-10-30, not yet confirmed on a watch): on a Forerunner 255 Music the G7 accepted a write only within about 70 ms after its own transmission; a later write waited for its next ~3 s beat. The watch now computes its first two pairing rounds while it scans, requests the ExtraData subscription and the first round command before any logging, and paces each round answer (one chunk at once, the rest about 0.84 s after the sensor's frame while CCCD reads keep the link busy).
 - Automated tests and simulator sessions do not prove successful pairing with a real sensor.
 - Physical-watch testing is required. Please report exact watch model, app commit/build, and sanitized diagnostic details when asking for help.
-- Direct watch-to-sensor testing should not require xDrip.
+- Direct watch-to-sensor testing does not require xDrip. An optional phone bridge to an xDrip+ build with the Garmin watch module can set the collector mode, hand the watch a saved sensor key and receive its readings; see [docs/PHONE_BRIDGE.md](docs/PHONE_BRIDGE.md).
 - This public repository is separate from the author's private development repository. It excludes personal watch logs, private defaults, and automatic log uploading.
 
 ## Before testing
@@ -18,8 +19,9 @@ This is a **community testing project**, not a medical device. It is not validat
 2. Build the app using the Garmin Connect IQ SDK and your own developer signing key.
 3. Install it using Garmin's supported developer workflow.
 4. Open the app and enter **your own sensor's four-digit pairing code** in the pairing-code menu. The default is `----`, which disables pairing until you enter a code.
-5. Keep your normal CGM and pump workflows available. This experiment is not a reliable glucose source.
-6. Capture the watch's Connect IQ log locally if a test fails. Review it before sharing; remove personal identifiers, any glucose values you do not want to disclose, and credentials or pairing material.
+5. Check **Collector** in the menu: the default *Watch as Watch* asks the sensor for its watch slot (`03`), which can coexist with a phone app on slot `02`. *Watch as App* uses slot `02` and must not share it with a phone app; *None* and *Phone as App* keep the watch off. See [docs/PHONE_BRIDGE.md](docs/PHONE_BRIDGE.md).
+6. Keep your normal CGM and pump workflows available. This experiment is not a reliable glucose source.
+7. Capture the watch's Connect IQ log locally if a test fails. Review it before sharing; remove personal identifiers, any glucose values you do not want to disclose, and credentials or pairing material.
 
 ## Build and test
 
@@ -81,6 +83,7 @@ The original input is not modified. Older long-format log lines and unrecognized
 
 - [Tools README](tools/README.md) — how to decode watch TXT logs locally, command options, and privacy guidance.
 - [Log record code reference](docs/LOG_CODES.md) — public event-code mappings and field layouts.
+- [Collector setting and optional phone bridge](docs/PHONE_BRIDGE.md) — the five collector modes, slots, and the xDrip+ message contract.
 
 
 ## Sensor-name matching

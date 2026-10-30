@@ -5,10 +5,7 @@ using Toybox.Math;
 using Toybox.System;
 using Toybox.WatchUi;
 
-
 module ScoutScreens {
-
-
     const IDLE_MS = 10000;
     var depth = 0;
     var closer = null;
@@ -40,6 +37,7 @@ module ScoutScreens {
     function pushMenu() {
         var menu = new WatchUi.Menu2({ :title => "G7 Scout" });
         menu.addItem(new WatchUi.MenuItem("Pairing code", codeSubLabel(), :code, null));
+        menu.addItem(new WatchUi.MenuItem("Collector", ScoutCollector.label(), :collector, null));
         menu.addItem(new WatchUi.MenuItem("Status", null, :status, null));
         menu.addItem(new WatchUi.MenuItem("Debug info", null, :debug, null));
         push(menu, new ScoutMenuDelegate(), WatchUi.SLIDE_UP);
@@ -71,14 +69,18 @@ module ScoutScreens {
             ["Last BG", ScoutView.glucoseHasValue ? ScoutView.glucoseValue + " mg/dL" : "--"],
             ["Sensor", ScoutView.targetBound ? ScoutView.targetName : "not bound"],
             ["Code", codeSubLabel()],
+            ["Collector", ScoutCollector.label() + " (" + ScoutCollector.lastResult + ")"],
             ["Connects", "" + ScoutView.connectionAttemptNumber],
             ["Watch battery", System.getSystemStats().battery.toNumber() + "%"],
             ["Sensor age", sensorAgeText()],
             ["Saved key", ScoutView.hasSavedAuthKey() ? "#" + ScoutPhoneLink.keyPrint() + (ScoutView.savedKeyUsable() ? " yes" : " not ours") : "no"],
-            ["Slot", (ScoutCollector.isBoth() ? "dual" : (ScoutView.forcedDisplayType() != 0 ? "forced" : ScoutView.slotPolicy)) + " (" + ScoutView.g7DisplayType + ")"],
+            ["Phone key", ScoutPhoneLink.keyStatus()],
+            ["Key sensor", ScoutPhoneLink.keyName().length() > 0 ? ScoutPhoneLink.keyName() : "any"],
+            ["Slot", "" + ScoutView.g7DisplayType + (ScoutCollector.isWatch() ? "" : " (watch off)")],
+            ["Phone msg", "" + ScoutPhoneLink.lastMessage],
+            ["To phone", "" + ScoutGlucoseSender.lastResult]
         ];
     }
-
 
     function sensorAgeText() {
         if (ScoutView.lastSensorClockSeconds < 0) { return "--"; }
@@ -100,10 +102,12 @@ class ScoutMenuDelegate extends WatchUi.Menu2InputDelegate {
         if (id == :code) {
             var view = new ScoutCodeView();
             ScoutScreens.push(view, new ScoutCodeDelegate(view, item), WatchUi.SLIDE_LEFT);
+        } else if (id == :collector) {
+            ScoutCollector.toggle();
+            item.setSubLabel(ScoutCollector.label());
         } else if (id == :debug) {
             var view = new ScoutListView("DEBUG", :debug);
             ScoutScreens.push(view, new ScoutListDelegate(view), WatchUi.SLIDE_LEFT);
-        } else if (id == :log) {
         } else if (id == :status) {
             var view = new ScoutListView("STATUS", :status);
             ScoutScreens.push(view, new ScoutListDelegate(view), WatchUi.SLIDE_LEFT);
@@ -111,15 +115,9 @@ class ScoutMenuDelegate extends WatchUi.Menu2InputDelegate {
     }
 }
 
-
-
-
-
-
 class ScoutCodeView extends WatchUi.View {
     static const FOCUS_CANCEL = 0;
     static const FOCUS_SAVE = 5;
-
     var digits = new [4];
     var focus = 1;
 
@@ -256,7 +254,6 @@ class ScoutCodeDelegate extends WatchUi.InputDelegate {
     }
 }
 
-
 class ScoutListView extends WatchUi.View {
     var title;
     var kind;
@@ -313,9 +310,6 @@ class ScoutListView extends WatchUi.View {
         }
     }
 
-
-
-
     function drawStatus(dc, w, h) {
         var items = lines();
         var labelH = dc.getFontHeight(Graphics.FONT_XTINY);
@@ -341,7 +335,6 @@ class ScoutListView extends WatchUi.View {
         dc.drawText(w / 2, h * 0.89, Graphics.FONT_XTINY, (offset + 1) + "/" + items.size(),
             Graphics.TEXT_JUSTIFY_CENTER);
     }
-
 
     static function chordWidth(w, h, top, rowH) {
         if (System.getDeviceSettings().screenShape != System.SCREEN_SHAPE_ROUND) { return w; }

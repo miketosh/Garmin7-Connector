@@ -1,6 +1,6 @@
 # BLE pairing test protocol
 
-This project is an experimental direct BLE client. The phone integration and log-upload path from the private development project have been disabled in this public build. The watch is the collector; no xDrip app is required for the direct connection attempt.
+This project is an experimental direct BLE client. The log-upload path from the private development project is not included. The phone bridge is optional ([PHONE_BRIDGE.md](PHONE_BRIDGE.md)); with the default **Collector** mode, *Watch as Watch*, the watch collects on the sensor's watch slot and no xDrip app is required for the direct connection attempt.
 
 ## Fresh-pairing test
 
@@ -32,7 +32,7 @@ Please include:
 - Exact watch model, firmware, and Connect IQ SDK version used to build.
 - Commit SHA and app build identifier.
 - Whether this was fresh pairing or a saved-key reconnect.
-- Whether xDrip was installed/running (for the direct test it should not be required).
+- The **Collector** mode, and whether xDrip was installed/running (for the direct test it should not be required).
 - Approximate local time and which phase was last reached.
 - Only a short, reviewed, sanitized diagnostic excerpt.
 

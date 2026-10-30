@@ -6,32 +6,11 @@ using Toybox.System;
 using Toybox.Timer;
 using Toybox.WatchUi;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class ScoutSimApp extends ScoutApp {
     function initialize() {
         ScoutApp.initialize();
         try { Application.Storage.deleteValue("g7SlotPolicy"); } catch (e) { }
-
-
         try { Application.Storage.deleteValue("savedAuthKeyHex"); } catch (e) { }
-
         try { Application.Storage.deleteValue("g7DeviceName"); } catch (e) { }
         ScoutView.loadSlotPolicy();
         ScoutView.loadTargetBinding();
@@ -78,6 +57,7 @@ class SimDescriptor {
     function getCharacteristic() { return characteristic; }
     function getUuid() { return Ble.cccdUuid(); }
     function requestWrite(value) { characteristic.sensor.onCccdWrite(self, value); }
+    function requestRead() { characteristic.sensor.onCccdRead(self); }
 }
 
 class SimCharacteristic {
@@ -124,8 +104,6 @@ class SimDevice {
 }
 
 class ScoutSimSensor {
-
-
     static const AUTH_ACK_DELAY_MS = 3200;
     var timer;
     var events = [];
@@ -147,26 +125,17 @@ class ScoutSimSensor {
     var token;
     var challenge;
     var expectedRx = 0;
-
-
     var extraCccd = 0;
     var extraStalled = false;
-
-
     var roundsStarted = false;
     var loggedIn = false;
-
     var bondedOnce = false;
-
-
     var loseChunkPending = true;
 
     function initialize() {
         timer = new Timer.Timer();
         runner = new KeksMathRunner(method(:onMath), "simMath", method(:appIsSending));
     }
-
-
 
     function appIsSending() {
         return ScoutView.keksWriteScheduler.isSendingPayload();
@@ -208,14 +177,12 @@ class ScoutSimSensor {
         ScoutView.markConnected(device, "SIM_SENSOR");
     }
 
-
-    var refuseSlot = false;
+    var keepAliveReads = 0;
 
     function post(event) {
         events.add(event);
         if (events.size() == 1) { timer.start(method(:deliver), delayOf(event), false); }
     }
-
 
     function delayOf(event) {
         var delay = event.size() > 3 ? event[3] : ScoutClock.MIN_DELAY_MS;
@@ -239,8 +206,10 @@ class ScoutSimSensor {
             ScoutView.delegate.onEncryptionStatus(device, Ble.STATUS_SUCCESS);
         } else if (kind == 5) {
             requestPending = false;
-
             ScoutView.delegate.onCharacteristicRead(event[1], 2, []b);
+        } else if (kind == 6) {
+            requestPending = false;
+            ScoutView.delegate.onDescriptorRead(event[1], Ble.STATUS_SUCCESS, [extraCccd, 0x00]b);
         } else if (kind == 4) {
             device.connected = false;
             ScoutView.delegate.onConnectedStateChanged(device, Ble.CONNECTION_STATE_DISCONNECTED);
@@ -254,8 +223,6 @@ class ScoutSimSensor {
 
     function notify(characteristic, bytes) {
         if (characteristic == extra && extraCccd != 0x01) {
-
-
             if (extraStalled) { return; }
             extraStalled = true;
             log("FAIL ExtraData CCCD=" + extraCccd + " (xDrip uses notifications, 0x01); stalling after this chunk");
@@ -273,8 +240,6 @@ class ScoutSimSensor {
     function notifyExtra(bytes) {
         notifyExtraRange(bytes, 0, bytes.size());
     }
-
-
 
     function notifyRound1WithAuthAck(bytes) {
         if (bytes == null || bytes.size() != 160) {
@@ -295,7 +260,6 @@ class ScoutSimSensor {
         requestPending = true;
     }
 
-
     function onCccdWrite(descriptor, value) {
         guardRequest();
         if (descriptor.getCharacteristic() == extra) { extraCccd = value[0] & 0xFF; }
@@ -305,6 +269,12 @@ class ScoutSimSensor {
     function onRead(characteristic) {
         guardRequest();
         post([5, characteristic]);
+    }
+
+    function onCccdRead(descriptor) {
+        guardRequest();
+        keepAliveReads += 1;
+        post([6, descriptor]);
     }
 
     function onWrite(characteristic, value) {
@@ -331,19 +301,12 @@ class ScoutSimSensor {
                 notify(control, [0x4E, 0x00, 0x10, 0x27, 0x00, 0x00, 0x2A, 0x00, 0x00, 0x00,
                     0x3C, 0x00, 0x7B, 0x00, 0x06, 0x05, 0xFF, 0xFF, 0x00]b);
                 log("SESSION_COMPLETE session=" + session);
-                if (session == 2) {
+                if (session == 1) {
                     log("RECONNECT expecting the saved-key login");
                     post([4, null, null, 1000]);
-                } else if (session == 3) {
-
-
-
-
-
+                } else if (session == 2) {
                     log("RECONNECT as a watch holding the phone's key, not bonded");
                     bondedOnce = false;
-                    try { Application.Storage.deleteValue("g7SlotPolicy"); } catch (e) { }
-                    ScoutView.loadSlotPolicy();
                     post([4, null, null, 1000]);
                 }
             }
@@ -371,13 +334,8 @@ class ScoutSimSensor {
         } else if (op == 0x02) {
             var displayType = value[9] & 0xFF;
             log("AUTH_REQUEST displayType=" + displayType + " round3Bytes=" + rx.size());
-
-
-
-            refuseSlot = displayType == 0x03;
             token = value.slice(1, 9);
             if (!roundsStarted && key != null) {
-
                 log("SAVED_KEY_AUTH_RX slot=" + displayType);
                 challenge = Cryptography.randomBytes(8);
                 var reply = [0x03]b;
@@ -394,15 +352,7 @@ class ScoutSimSensor {
             var expected = aes(challenge);
             var ok = ScoutView.bytesEqual(value.slice(1, 9), expected.slice(0, 8));
             log("AUTH_CHALLENGE_RX ok=" + ok + " bondedOnce=" + bondedOnce);
-            if (refuseSlot) {
-                log("REFUSE_WATCH_SLOT status=050001");
-                notify(auth, [0x05, 0x00, 0x01]b);
-
-                post([4]);
-                return;
-            }
             loggedIn = ok;
-
             notify(auth, [0x05, ok ? 0x01 : 0x00, bondedOnce ? 0x01 : 0x02]b);
         } else if (op == 0x0B) {
             var which = value[1] & 0xFF;
@@ -417,8 +367,6 @@ class ScoutSimSensor {
             notify(auth, [0x0D, 0x00]b);
         } else if (op == 0x06) {
             if (!roundsStarted && !loggedIn) {
-
-
                 log("FAIL keep-alive before round 1; dropping link like the G7");
                 post([4]);
                 return;
@@ -433,7 +381,6 @@ class ScoutSimSensor {
         bondedOnce = true;
         post([3]);
     }
-
 
     function onMath(action, task) {
         log("MATH " + action + " ok=" + (task.result != null) + " failure=" + task.failure +

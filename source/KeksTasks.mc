@@ -20,6 +20,9 @@ class KeksMathRunner {
     var taskStartMs;
     var taskStartTick;
     var maxTickSpent;
+    var taskHoldAccum;
+    var holdStartedAt;
+    var taskFirstTickAtMs;
 
     // hold: optional Method returning true while ticks should wait (null = never).
     function initialize(callback, key, hold) {
@@ -33,6 +36,9 @@ class KeksMathRunner {
         taskStartMs = 0;
         taskStartTick = 0;
         maxTickSpent = 0;
+        taskHoldAccum = 0;
+        holdStartedAt = -1;
+        taskFirstTickAtMs = -1;
     }
 
     // SDK 9.3.0 device profiles: the execution watchdog is 240,000 VM
@@ -50,11 +56,13 @@ class KeksMathRunner {
     }
 
     function enqueue(task, action) {
-        queue.add([task, action]);
+        queue.add([task, action, System.getTimer()]);
         if (!active) {
             active = true;
             taskStartMs = System.getTimer();
             taskStartTick = ticks;
+            taskHoldAccum = 0;
+            holdStartedAt = -1;
             ScoutClock.get().scheduleBackground(clockKey, 1, method(:tick));
         }
     }
@@ -78,11 +86,24 @@ class KeksMathRunner {
         return ticks - taskStartTick;
     }
 
+    function taskHoldMs() {
+        return taskHoldAccum + (holdStartedAt < 0 ? 0 : System.getTimer() - holdStartedAt);
+    }
+
+    function taskQueueDelayMs() {
+        return taskFirstTickAtMs < 0 ? -1 : taskFirstTickAtMs - taskStartMs;
+    }
+
     function tick() {
         if (!active) { return; }
         if (holdWhile != null && holdWhile.invoke()) {
+            if (holdStartedAt < 0) { holdStartedAt = System.getTimer(); }
             ScoutClock.get().scheduleBackground(clockKey, 50, method(:tick));
             return;
+        }
+        if (holdStartedAt >= 0) {
+            taskHoldAccum += System.getTimer() - holdStartedAt;
+            holdStartedAt = -1;
         }
         ticks += 1;
         var started = System.getTimer();
@@ -91,14 +112,21 @@ class KeksMathRunner {
                System.getTimer() - started < WALL_MS) {
             var entry = queue[0];
             var task = entry[0];
+            if (taskFirstTickAtMs < 0) {
+                taskStartMs = entry[2];
+                taskFirstTickAtMs = System.getTimer();
+            }
             task.step();
             if (task.done) {
                 queue = queue.slice(1, null);
                 if (KeksP256.spent > maxTickSpent) { maxTickSpent = KeksP256.spent; }
                 doneCallback.invoke(entry[1], task);
                 if (!active) { return; }
-                taskStartMs = System.getTimer();
+                taskStartMs = 0;
                 taskStartTick = ticks;
+                taskHoldAccum = 0;
+                holdStartedAt = -1;
+                taskFirstTickAtMs = -1;
             }
         }
         if (KeksP256.spent > maxTickSpent) { maxTickSpent = KeksP256.spent; }

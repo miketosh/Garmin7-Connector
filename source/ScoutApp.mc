@@ -12,7 +12,6 @@ using Toybox.Timer;
 using Toybox.WatchUi;
 
 class ScoutApp extends Application.AppBase {
-
     static function buildVersion() {
         return "local-dev";
     }
@@ -29,13 +28,13 @@ class ScoutApp extends Application.AppBase {
         ScoutView.loadTargetBinding();
         ScoutReadingSync.restore();
         ScoutView.initializeGattProfiles();
+        ScoutPhoneLink.start();
     }
 
     function getInitialView() {
         return [ new ScoutSplashView(), new ScoutInputDelegate() ];
     }
 }
-
 
 class ScoutBacklightController {
     var deadline;
@@ -95,7 +94,6 @@ class ScoutSplashView extends WatchUi.View {
     function showDashboard() {
         ScoutClock.get().cancel("splash");
         WatchUi.switchToView(new ScoutView(), new ScoutInputDelegate(), WatchUi.SLIDE_IMMEDIATE);
-
         if (!ScoutView.isUsablePairingCode(ScoutView.getConfiguredPairingCode())) {
             var codeView = new ScoutCodeView();
             WatchUi.pushView(codeView, new ScoutCodeDelegate(codeView, null), WatchUi.SLIDE_IMMEDIATE);
@@ -123,8 +121,6 @@ class ScoutBleDelegate extends Ble.BleDelegate {
         BleDelegate.initialize();
     }
 
-
-
     function onScanResults(scanResults) {
         var result = scanResults.next();
         while (result != null) {
@@ -144,26 +140,23 @@ class ScoutBleDelegate extends Ble.BleDelegate {
                 }
 
                 var hits = index >= 0 ? ScoutView.deviceHits[index] : 0;
-                var normalizedName = name == null ? "" : name.toUpper();
-                if (ScoutView.TARGET_NAME_UPPER.length() > 0 && normalizedName.equals(ScoutView.TARGET_NAME_UPPER)) {
+                var candidateName = name == null ? "" : name;
+                var matchingName = candidateName.toUpper();
+                if (ScoutView.targetName.length() > 0 && ScoutView.namesMatch(candidateName, ScoutView.targetName)) {
                     if (ScoutView.targetScanResult == null && !ScoutView.connectionAttempted) {
                         ScoutView.onTargetFound(scanResult, name, rssi);
                     } else if (ScoutView.targetScanResult != null) {
                         ScoutView.targetRssi = rssi;
                     }
-                } else if (ScoutView.TARGET_NAME_UPPER.length() == 0 && normalizedName.length() >= 4 &&
-                    normalizedName.substring(0, 4).equals("DXCM")) {
+                } else if (ScoutView.targetName.length() == 0 && matchingName.length() >= 4 &&
+                    matchingName.substring(0, 4).equals("DXCM")) {
                     ScoutView.offerUnboundCandidate(scanResult, name, rssi);
                 }
-
-
-                var isDxcmPrefix = normalizedName.length() >= 4 &&
-                    normalizedName.substring(0, 4).equals("DXCM");
-                var isLegacyDexcomName = normalizedName.length() >= 6 &&
-                    normalizedName.substring(0, 6).equals("DEXCOM");
+                var isDxcmPrefix = matchingName.length() >= 4 &&
+                    matchingName.substring(0, 4).equals("DXCM");
+                var isLegacyDexcomName = matchingName.length() >= 6 &&
+                    matchingName.substring(0, 6).equals("DEXCOM");
                 var isG7Candidate = isDxcmPrefix || (hasFebc && !isLegacyDexcomName);
-
-
 
                 if (isG7Candidate) {
                     if (hits == 1 || hits % 20 == 0) {
@@ -200,8 +193,6 @@ class ScoutBleDelegate extends Ble.BleDelegate {
             }
         } else {
             ScoutView.scanning = false;
-
-
             if (ScoutView.awaitingConnect && ScoutView.targetScanResult != null) {
                 ScoutView.scanStatus = "CONN PENDING";
             } else if (!ScoutView.connectionAttempted && !ScoutView.connectionInFlight) {
@@ -260,11 +251,14 @@ class ScoutBleDelegate extends Ble.BleDelegate {
     }
 
     function onConnectedStateChanged(connectedDevice, state) {
+        var isConnectedState = state == Ble.CONNECTION_STATE_CONNECTED;
+        if (isConnectedState) {
+            ScoutView.markConnected(connectedDevice, "CONNECTION_CALLBACK");
+        }
         var name = connectedDevice.getName();
         ScoutLog.println("LS");
-        if (state == Ble.CONNECTION_STATE_CONNECTED) {
+        if (isConnectedState) {
             ScoutView.lightBacklight();
-            ScoutView.markConnected(connectedDevice, "CONNECTION_CALLBACK");
         } else if (state == Ble.CONNECTION_STATE_DISCONNECTED) {
             ScoutView.onSavedAuthLinkLost();
             ScoutView.onLinkLost();
@@ -281,7 +275,6 @@ class ScoutBleDelegate extends Ble.BleDelegate {
                 var gotReading = ScoutView.sessionGotReading;
                 ScoutLog.println("DR" + gotReading);
                 ScoutView.noteDebug("LINK DOWN " + (System.getTimer() - ScoutView.connectedAtMs) + "ms");
-                if (!gotReading) {  }
                 ScoutView.rescanAfterSession(gotReading);
             }
         } else {
@@ -298,21 +291,14 @@ class ScoutBleDelegate extends Ble.BleDelegate {
             ScoutView.keksWriteScheduler.onSensorResponse();
         }
         if (isAuth && ScoutView.isFreshKeksActive()) {
-
-
-
             ScoutView.handleFreshKeksAuthMessage(value);
+            if (ScoutView.keksRoundReceiving()) { return; }
             ScoutView.lightBacklight();
             WatchUi.requestUpdate();
             return;
         }
         if (isAuth) {
-
             var authOpcode = (value != null && value.size() > 0) ? (value[0] & 0xFF) : -1;
-
-
-
-
             var answered = false;
             if (authOpcode == 0x03 && value != null && value.size() >= 17) {
                 answered = ScoutView.sendSavedKeyChallengeResponse(value);
@@ -321,9 +307,8 @@ class ScoutBleDelegate extends Ble.BleDelegate {
             ScoutView.authProbeResponseSeen = true;
             ScoutView.authProbeWatchdog.stop();
             if (authOpcode == 0x03 && value != null && value.size() >= 17) {
-
                 ScoutLog.println("K28:8:9");
-                if (!answered) {
+                if (!answered && !ScoutView.scanStatus.equals("OWN PAIRING")) {
                     ScoutView.scanStatus = "NEED KEKS";
                 }
             } else if (authOpcode == 0x03) {
@@ -333,8 +318,6 @@ class ScoutBleDelegate extends Ble.BleDelegate {
                 var authByte = value[1] & 0xFF;
                 var bondedByte = value[2] & 0xFF;
                 ScoutView.g7Authenticated = authByte == 1;
-
-
                 var locallyBonded = false;
                 try { locallyBonded = ScoutView.device != null && ScoutView.device.isBonded(); } catch (bondQuery) { locallyBonded = false; }
                 ScoutView.g7Bonded = bondedByte == 1 || (bondedByte == 2 && locallyBonded);
@@ -347,10 +330,6 @@ class ScoutBleDelegate extends Ble.BleDelegate {
                     ScoutView.enableCharacteristicIndications(ScoutView.device, ScoutView.UUID_CONTROL, "CONTROL", 0x02);
                     ScoutView.scanStatus = "AUTH OK";
                 } else if (ScoutView.g7Authenticated && !ScoutView.sessionTerminal) {
-
-
-
-
                     ScoutLog.println("SN" + bondedByte +
                         ":" + (System.getTimer() - ScoutView.connectedAtMs));
                     ScoutView.beginSavedKeyCertificates();
@@ -370,27 +349,19 @@ class ScoutBleDelegate extends Ble.BleDelegate {
             if (ScoutView.isFreshKeksActive()) {
                 ScoutView.handleFreshKeksExtraData(value);
             } else {
-
                 ScoutLog.println("XI" + (value == null ? 0 : value.size()) +
                     ":" + ScoutView.freshKeksState);
             }
         }
-
-
+        if (ScoutView.isFreshKeksActive() && ScoutView.UUID_EXTRA.equals(uuid)) { return; }
         ScoutView.lightBacklight();
         WatchUi.requestUpdate();
     }
 
     function onDescriptorWrite(descriptor, status) {
         ScoutView.keksWriteScheduler.noteLink();
-        ScoutView.lightBacklight();
         var uuid = descriptor.getCharacteristic().getUuid();
-        ScoutLog.println("WR" + ScoutView.shortUuid(uuid) + ":" + status);
         if (ScoutView.UUID_CONTROL.equals(uuid)) {
-
-
-
-
             if (status == Ble.STATUS_SUCCESS) {
                 ScoutView.requestGlucose();
             } else {
@@ -408,14 +379,10 @@ class ScoutBleDelegate extends Ble.BleDelegate {
         } else if (ScoutView.UUID_AUTH.equals(uuid)) {
             if (status == Ble.STATUS_SUCCESS) {
                 ScoutView.authCccdReady = true;
-
-
                 if (!ScoutCollector.isWatch()) {
                     ScoutView.scanStatus = "PHONE HAS G7";
                     ScoutLog.println("CBphone-collector:auth-cccd");
                 } else if (ScoutView.isUsablePairingCode(ScoutView.getConfiguredPairingCode())) {
-
-
                     if (ScoutView.savedKeyUsable()) {
                         ScoutView.sendAuthRequestProbe();
                     } else {
@@ -429,9 +396,13 @@ class ScoutBleDelegate extends Ble.BleDelegate {
                 ScoutView.scanStatus = "SUB-A FAILED";
             }
         }
+        ScoutLog.println("WR" + ScoutView.shortUuid(uuid) + ":" + status);
+        ScoutView.lightBacklight();
     }
 
-
+    function onDescriptorRead(descriptor, status, value) {
+        ScoutView.keksWriteScheduler.onKeepAliveRead(status);
+    }
 
     function onCharacteristicWrite(characteristic, status) {
         if (status != Ble.STATUS_SUCCESS) {
@@ -485,71 +456,21 @@ class ScoutProfileRegistrationWatchdog {
     function onTimeout() { ScoutView.onProfileRegistrationTimeout(); }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class ScoutKeksWriteScheduler {
     static const MAX_QUEUED = 4;
-
-
-
-
-
     static const CHUNK_CALLBACK_MS = 1000;
-
-
-
-
-
-
-
-
     static var chunksWithResponse = false;
     static var chunkResponseRefused = false;
     static var keksAttempts = 0;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     static var settleMode = 0;
     static const SETTLE_MS = 50;
+    static var paceRounds = true;
+    static const PACE_AFTER_SENSOR_MS = 840;
+    static const KEEPALIVE_TIMEOUT_MS = 300;
     static const PING_TIMEOUT_MS = 4000;
-
-
     static const CHUNK_RESPONSE_MS = 8000;
-
-
-
-
     static const CHUNK_RESPONSE_FAST_MS = 1000;
     static const FAST_ACK_MS = 1000;
-
-
-
-
-
     static const COMMAND_CALLBACK_MS = 15000;
     static const BUSY_RETRIES = 60;
 
@@ -567,13 +488,16 @@ class ScoutKeksWriteScheduler {
     var chunkSize = 0;
     var chunkSentMs = 0;
     var payloadStartMs = 0;
-
     var lastLinkMs = 0;
     var commandGapMs = 0;
-
-
     var lastAckMs = COMMAND_CALLBACK_MS;
     var chunkResent = false;
+    var pacedFrameMs = -1;
+    var pacedUntilMs = -1;
+    var keepAliveReads = 0;
+    var keepAliveMaxMs = 0;
+    var keepAliveBroken = false;
+    var keepAliveSentMs = 0;
 
     function initialize() {
         pending = [];
@@ -584,7 +508,14 @@ class ScoutKeksWriteScheduler {
         var hasPayload = packetBytes != null && packetBytes.size() > 0;
         var hasCommand = commandBytes != null && commandBytes.size() > 0;
         if ((!hasPayload && !hasCommand) || pending.size() >= MAX_QUEUED) { return false; }
-        pending.add([hasPayload ? packetBytes : null, hasCommand ? commandBytes : null, label, commandTarget]);
+        pending.add([hasPayload ? packetBytes : null, hasCommand ? commandBytes : null, label, commandTarget, -1]);
+        if (!active) { startNext(); }
+        return true;
+    }
+
+    function queuePaced(packetBytes, commandBytes, label, commandTarget, frameDoneMs) {
+        if (packetBytes == null || packetBytes.size() == 0 || pending.size() >= MAX_QUEUED) { return false; }
+        pending.add([packetBytes, commandBytes, label, commandTarget, frameDoneMs]);
         if (!active) { startNext(); }
         return true;
     }
@@ -603,6 +534,11 @@ class ScoutKeksWriteScheduler {
         chunkCallbacksMissed = 0;
         lastAckMs = COMMAND_CALLBACK_MS;
         chunkResent = false;
+        pacedFrameMs = -1;
+        pacedUntilMs = -1;
+        keepAliveReads = 0;
+        keepAliveMaxMs = 0;
+        keepAliveBroken = false;
     }
 
     function startNext() {
@@ -621,6 +557,11 @@ class ScoutKeksWriteScheduler {
         busyRetries = 0;
         chunkCallbacksMissed = 0;
         payloadStartMs = System.getTimer();
+        pacedFrameMs = next[4];
+        pacedUntilMs = (paceRounds && pacedFrameMs >= 0) ? pacedFrameMs + PACE_AFTER_SENSOR_MS : -1;
+        keepAliveReads = 0;
+        keepAliveMaxMs = 0;
+        keepAliveBroken = false;
         active = true;
         send();
     }
@@ -628,7 +569,6 @@ class ScoutKeksWriteScheduler {
     function noteLink() {
         lastLinkMs = System.getTimer();
     }
-
 
     function send() {
         if (!active || awaiting != 0) { return; }
@@ -667,7 +607,6 @@ class ScoutKeksWriteScheduler {
                 ScoutClock.get().schedule("keksWrite", COMMAND_CALLBACK_MS, method(:onCallbackTimeout));
             }
         } catch (exception) {
-
             busyRetries += 1;
             if (busyRetries > BUSY_RETRIES) {
                 fail("write-exception");
@@ -684,8 +623,6 @@ class ScoutKeksWriteScheduler {
         var wasCommand = awaiting == 2;
         awaiting = 0;
         if (status != Ble.STATUS_SUCCESS && !wasCommand && chunksWithResponse) {
-
-
             chunksWithResponse = false;
             chunkResponseRefused = true;
             offset -= chunkSize;
@@ -702,15 +639,12 @@ class ScoutKeksWriteScheduler {
             completeCommand("ack");
             return;
         }
-
-
         if (chunksWithResponse) {
             ScoutLog.println("KD" + ((offset - chunkSize) / 20) + ":" + (System.getTimer() - chunkSentMs));
         }
         chunkResent = false;
         scheduleAfterChunk();
     }
-
 
     function onSensorResponse() {
         if (active && awaiting == 2) {
@@ -729,7 +663,6 @@ class ScoutKeksWriteScheduler {
         ScoutLog.println("KC" + label + ":" + size +
             ":" + source + ":" + (System.getTimer() - commandSentMs) +
             ":" + commandGapMs);
-
         var shortLabel = label.equals("START_ROUND1") ? "0A00" :
             (label.equals("ROUND1") ? "0A01" : (label.equals("ROUND2") ? "0A02" :
             label.substring(0, label.length() < 9 ? label.length() : 9)));
@@ -737,7 +670,6 @@ class ScoutKeksWriteScheduler {
         ScoutView.onKeksCommandWritten(label, target);
         startNext();
     }
-
 
     var pingSentMs = 0;
 
@@ -764,8 +696,44 @@ class ScoutKeksWriteScheduler {
         send();
     }
 
+    function keepAlive() {
+        var cccd = ScoutView.extraCccd();
+        if (cccd == null) {
+            keepAliveBroken = true;
+            send();
+            return;
+        }
+        try {
+            cccd.requestRead();
+        } catch (exception) {
+            keepAliveBroken = true;
+            send();
+            return;
+        }
+        awaiting = 4;
+        keepAliveSentMs = System.getTimer();
+        ScoutClock.get().schedule("keksWrite", KEEPALIVE_TIMEOUT_MS, method(:onCallbackTimeout));
+    }
+
+    function onKeepAliveRead(status) {
+        noteLink();
+        if (!active || awaiting != 4) { return; }
+        ScoutClock.get().cancel("keksWrite");
+        awaiting = 0;
+        var took = System.getTimer() - keepAliveSentMs;
+        keepAliveReads += 1;
+        if (took > keepAliveMaxMs) { keepAliveMaxMs = took; }
+        scheduleAfterChunk();
+    }
+
     function onCallbackTimeout() {
         if (!active || awaiting == 0) { return; }
+        if (awaiting == 4) {
+            awaiting = 0;
+            keepAliveBroken = true;
+            send();
+            return;
+        }
         if (awaiting == 3) {
             awaiting = 0;
             ScoutLog.println("K0timeout:" + (System.getTimer() - pingSentMs));
@@ -783,7 +751,6 @@ class ScoutKeksWriteScheduler {
         ScoutLog.println("KX" + ((offset - chunkSize) / 20) + ":" + (System.getTimer() - chunkSentMs) +
             ":" + resend);
         if (resend) {
-
             chunkResent = true;
             offset -= chunkSize;
             send();
@@ -793,9 +760,6 @@ class ScoutKeksWriteScheduler {
         scheduleAfterChunk();
     }
 
-
-
-
     function isSendingPayload() {
         return active && packet != null &&
             (awaiting == 1 || offset < packet.size() || (command != null && awaiting != 2));
@@ -803,17 +767,29 @@ class ScoutKeksWriteScheduler {
 
     function scheduleAfterChunk() {
         if (offset < packet.size()) {
-
-            send();
+            if (pacedUntilMs >= 0 && !keepAliveBroken && System.getTimer() < pacedUntilMs) {
+                keepAlive();
+            } else {
+                send();
+            }
         } else if (command != null) {
-            ScoutLog.println("KP" + purpose + ":" + packet.size() +
-                ":" + chunkCallbacksMissed + ":" + busyRetries +
-                ":" + (System.getTimer() - payloadStartMs) + ":" + chunksWithResponse +
-                ":command");
+            var payloadMs = System.getTimer() - payloadStartMs;
+            var payloadSize = packet.size();
+            var label = purpose;
+            var frameMs = pacedFrameMs;
             if (settleMode == 1) {
                 ScoutClock.get().schedule("keksWrite", SETTLE_MS, method(:send));
             } else if (settleMode != 2 || !ping()) {
                 send();
+            }
+            ScoutLog.println("KP" + label + ":" + payloadSize +
+                ":" + chunkCallbacksMissed + ":" + busyRetries +
+                ":" + payloadMs + ":" + chunksWithResponse +
+                ":command");
+            if (frameMs >= 0) {
+                ScoutLog.println("RK" + label + ":" + keepAliveReads +
+                    ":" + keepAliveMaxMs + ":" + keepAliveBroken +
+                    ":" + (System.getTimer() - frameMs));
             }
         } else {
             finishTransaction();
@@ -836,7 +812,6 @@ class ScoutKeksWriteScheduler {
         ScoutView.onWriteFailed(label, reason);
     }
 }
-
 
 class ScoutKeksMathListener {
     function initialize() { }
@@ -863,25 +838,10 @@ class ScoutView extends WatchUi.View {
     static var deviceNames = [];
     static var deviceRssi = [];
     static var deviceHits = [];
-
-
-
-
-
     static var targetName = "";
-    static var TARGET_NAME_UPPER = "";
     static var targetBound = false;
-
-
-
-
-
-
-
     static const ALTERNATE_WAIT_MS = 12000;
     static const PASS_OVER_SPAN_MS = 60000;
-
-
     static const WRONG_NAMES_KEY = "g7WrongNames2";
     static var seenCandidates = [];
     static var lastTriedName = "";
@@ -890,24 +850,12 @@ class ScoutView extends WatchUi.View {
     static var lastWrongSkip = "";
     static var lastKeySkip = "";
     static var wrongNames = null;
-
-
-
-
-
     static const RESCAN_AFTER_FAILURE_MS = 50;
     static const SCAN_ERROR_RETRY_MS = 1000;
     static const MAX_FAST_SCAN_ERRORS = 3;
     static const RETRY_DELAY_MS = 240000;
     static var scanErrorCount = 0;
     static var instantConnectFailures = 0;
-
-
-
-
-
-
-
     static const G7_WAKE_PERIOD_MS = 300000;
     static const WAKE_LEAD_MS = 20000;
     static const WAKE_LATE_MS = 60000;
@@ -918,8 +866,6 @@ class ScoutView extends WatchUi.View {
     static var missedWakes = 0;
     static var sessionGotReading = false;
     static var pendingScanWindowMs = 0;
-
-
     static var UUID_FEBC = Ble.stringToUuid("0000FEBC-0000-1000-8000-00805F9B34FB");
     static var UUID_CONTROL = Ble.stringToUuid("F8083534-849E-531C-C594-30F1F86A4EA5");
     static var UUID_AUTH = Ble.stringToUuid("F8083535-849E-531C-C594-30F1F86A4EA5");
@@ -947,8 +893,6 @@ class ScoutView extends WatchUi.View {
     static var authIndicationsRequested = false;
     static var authRequestSent = false;
     static var authProbeResponseSeen = false;
-
-
     static var savedAuthDisplayType = 0;
     static var authProbeWatchdog = new ScoutAuthProbeWatchdog();
     static var controlIndicationsRequested = false;
@@ -959,8 +903,6 @@ class ScoutView extends WatchUi.View {
     static var sessionTerminalReason = "NONE";
     static var freshKeksState = "OFF";
     static var keksMath = null;
-
-
     static var keksPassword = null;
     static var keksX1 = null;
     static var keksX2 = null;
@@ -981,26 +923,18 @@ class ScoutView extends WatchUi.View {
     static var freshKeksPartB = null;
     static var freshKeksPartC = null;
     static var freshKeksPrivateScalar = null;
-
     static var keksRxBuffer = null;
     static var keksRxCount = 0;
-
-
     static var keksRoundRxFirstAtMs = -1;
-
     static var keksRoundAckAtMs = -1;
-
-
+    static var keksRoundFrameDoneMs = -1;
+    static var keksRoundFirstChunk = 0;
+    static var keksDeferredAck = null;
     static var connectedAtMs = 0;
     static var lastAbortConnectMs = -1;
-
     static var dashboardShown = false;
-
-
     static var lastSensorClockSeconds = -1;
     static var lastSensorClockAtMs = 0;
-
-
     static const DEBUG_LINES = 10;
     static var debugLines = new [DEBUG_LINES];
     static var debugNext = 0;
@@ -1015,9 +949,6 @@ class ScoutView extends WatchUi.View {
     static function debugLine(i) {
         return debugLines[(debugNext - 1 - i + 2 * DEBUG_LINES) % DEBUG_LINES];
     }
-
-
-
     static var g7DisplayType = 0x02;
     static var slotPolicy = "watch-probe";
     static var extraDataCccdReady = false;
@@ -1030,7 +961,6 @@ class ScoutView extends WatchUi.View {
     static var glucoseAlgorithmState = -1;
     static var glucoseSequence = -1;
     static var previousGlucoseValue = -1;
-
     static var glucoseTrendDirection = 0;
     static var glucoseReceivedAtMs = -1;
 
@@ -1039,8 +969,6 @@ class ScoutView extends WatchUi.View {
     static var profileRegistrationFailed = false;
     static var profileRegistrationFailureReason = "NONE";
     static var profileRegistrationWatchdog = new ScoutProfileRegistrationWatchdog();
-
-
     static var manualBondProbeEnabled = false;
     static var delegate = new ScoutBleDelegate();
 
@@ -1054,14 +982,9 @@ class ScoutView extends WatchUi.View {
         ScoutLog.println("PS2:10000");
         try {
             var cccd = Ble.cccdUuid();
-
-
             Ble.registerProfile({
                 :uuid => Ble.stringToUuid("F8083532-849E-531C-C594-30F1F86A4EA5"),
                 :characteristics => [
-
-
-
                     { :uuid => Ble.stringToUuid("F8083533-849E-531C-C594-30F1F86A4EA5"), :descriptors => [] },
                     { :uuid => Ble.stringToUuid("F8083534-849E-531C-C594-30F1F86A4EA5"), :descriptors => [cccd] },
                     { :uuid => Ble.stringToUuid("F8083535-849E-531C-C594-30F1F86A4EA5"), :descriptors => [cccd] },
@@ -1106,8 +1029,6 @@ class ScoutView extends WatchUi.View {
     }
 
     static function startScan(resetAttemptCount, isAutomaticRetry, reason) {
-
-
         if (sessionTerminal) {
             scanStatus = "NO SESSION";
             ScoutLog.println("SBsensor-reported-terminal-state:" + sessionTerminalReason);
@@ -1118,8 +1039,6 @@ class ScoutView extends WatchUi.View {
             ScoutLog.println("SAalready-connected");
             return;
         }
-
-
         if (!isUsablePairingCode(getConfiguredPairingCode())) {
             scanStatus = "NO CODE";
             retryScanActive = false;
@@ -1140,7 +1059,6 @@ class ScoutView extends WatchUi.View {
         if (!targetBound && targetName.length() > 0) {
             var released = targetName;
             targetName = "";
-            TARGET_NAME_UPPER = "";
             var unpaired = unpairAllDevices();
             ScoutLog.println("DX" + released +
                 ":" + seenCandidates.size() + ":" + unpaired);
@@ -1163,12 +1081,11 @@ class ScoutView extends WatchUi.View {
         bondAttempted = false;
         g7Authenticated = false;
         g7Bonded = false;
-
-
         retryScanActive = isAutomaticRetry;
         scanStatus = isAutomaticRetry ? "RESCANNING" : "SCANNING";
 
         connectionTimerPurpose = "NONE";
+        prepareFreshKeks("scan-" + reason);
         ScoutLog.println("SS" + reason + ":" + isAutomaticRetry + ":until-target");
         try {
             Ble.setDelegate(delegate);
@@ -1184,8 +1101,6 @@ class ScoutView extends WatchUi.View {
         }
     }
 
-    // Compare names using temporary uppercase values, but never persist the
-    // normalized form. Sensor spelling is retained in all stored name fields.
     static function namesMatch(left, right) {
         return left != null && right != null && left.toUpper().equals(right.toUpper());
     }
@@ -1212,10 +1127,7 @@ class ScoutView extends WatchUi.View {
             targetName = "";
         }
         targetBound = targetName.length() > 0;
-        TARGET_NAME_UPPER = targetName.toUpper();
         seenCandidates = loadSeenNames(code);
-
-
         var lastTried = null;
         try { lastTried = Application.Storage.getValue("g7LastTriedName"); } catch (e) { lastTried = null; }
         lastTriedName = lastTried instanceof Lang.String ? lastTried : "";
@@ -1239,55 +1151,37 @@ class ScoutView extends WatchUi.View {
         noteDebug("SEEN " + rssi + "dBm");
         connectionTimerPurpose = "NONE";
         Ble.setScanState(Ble.SCAN_STATE_OFF);
-
-
-
         connectTarget();
     }
-
 
     static function scanErrorRetryMs() {
         scanErrorCount += 1;
         return scanErrorCount <= MAX_FAST_SCAN_ERRORS ? SCAN_ERROR_RETRY_MS : RETRY_DELAY_MS;
     }
 
-
-
-
     static function offerUnboundCandidate(scanResult, name, rssi) {
         if (targetScanResult != null || connectionAttempted || name == null) { return; }
-        var upper = name.toUpper();
-
-
-        var keyName = ScoutPhoneLink.keyNameUpper();
-        if (keyName.length() > 0 && !upper.equals(keyName)) {
-            if (!upper.equals(lastKeySkip)) {
-                lastKeySkip = upper;
+        var candidateName = name;
+        var keyName = ScoutPhoneLink.keyName();
+        if (keyName.length() > 0 && !namesMatch(candidateName, keyName)) {
+            if (!namesMatch(candidateName, lastKeySkip)) {
+                lastKeySkip = candidateName;
                 ScoutLog.println("DK");
             }
             return;
         }
-        if (isWrongName(upper)) {
-            if (!upper.equals(lastWrongSkip)) {
-                lastWrongSkip = upper;
+        if (isWrongName(candidateName)) {
+            if (!namesMatch(candidateName, lastWrongSkip)) {
+                lastWrongSkip = candidateName;
                 ScoutLog.println("DW");
             }
             return;
         }
-        if (nameIndexOf(seenCandidates, name) < 0) {
-            seenCandidates.add(name);
+        if (nameIndexOf(seenCandidates, candidateName) < 0) {
+            seenCandidates.add(candidateName);
             saveSeenNames();
         }
-
-
-
-
-
-
-        if (keyName.length() == 0 && namesMatch(name, lastTriedName) && (seenCandidates.size() > 1 || !lookedForOthers)) {
-
-
-
+        if (keyName.length() == 0 && namesMatch(candidateName, lastTriedName) && (seenCandidates.size() > 1 || !lookedForOthers)) {
             if (passedOverMs == null || System.getTimer() - passedOverMs > PASS_OVER_SPAN_MS) {
                 passedOverMs = System.getTimer();
                 ScoutLog.println("DA:" + ALTERNATE_WAIT_MS);
@@ -1297,15 +1191,13 @@ class ScoutView extends WatchUi.View {
             if (seenCandidates.size() == 1) { lookedForOthers = true; }
         }
         passedOverMs = null;
-        lastTriedName = name;
-        try { Application.Storage.setValue("g7LastTriedName", name); } catch (e) { }
-        targetName = name;
-        TARGET_NAME_UPPER = upper;
+        lastTriedName = candidateName;
+        try { Application.Storage.setValue("g7LastTriedName", candidateName); } catch (e) { }
+        targetName = candidateName;
         ScoutLog.println("DC");
         noteDebug("TRY " + name);
         onTargetFound(scanResult, name, rssi);
     }
-
 
     static const SEEN_NAMES_KEY = "g7SeenNames";
     static const MAX_SEEN_NAMES = 4;
@@ -1340,9 +1232,8 @@ class ScoutView extends WatchUi.View {
         return nameIndexOf(wrongNameList(), candidateName) >= 0;
     }
 
-
     static function markWrongName() {
-        if (targetBound || TARGET_NAME_UPPER.length() == 0) { return; }
+        if (targetBound || targetName.length() == 0) { return; }
         var list = wrongNameList();
         if (nameIndexOf(list, targetName) < 0) {
             list.add(targetName);
@@ -1353,7 +1244,6 @@ class ScoutView extends WatchUi.View {
         ScoutLog.println("DN:" + list.size());
         noteDebug("NOT " + targetName);
     }
-
 
     static function unpairAllDevices() {
         var unpaired = 0;
@@ -1381,7 +1271,6 @@ class ScoutView extends WatchUi.View {
         noteDebug("BOUND " + targetName);
     }
 
-
     static function stopForPhoneCollector() {
         if (scanning) {
             try { Ble.setScanState(Ble.SCAN_STATE_OFF); } catch (e) { }
@@ -1397,8 +1286,6 @@ class ScoutView extends WatchUi.View {
         scanStatus = "PHONE HAS G7";
         ScoutLog.println("CBphone-collector:released-" + released);
     }
-
-
 
     static function forgetTargetDevice() {
         try { Application.Storage.deleteValue("g7DeviceName"); } catch (e) { }
@@ -1424,7 +1311,6 @@ class ScoutView extends WatchUi.View {
             ScoutLog.println("CAsensor-reported-terminal-state:" + sessionTerminalReason);
             return;
         }
-
         if (!isUsablePairingCode(getConfiguredPairingCode())) {
             scanStatus = "NO CODE";
             awaitingConnect = false;
@@ -1472,10 +1358,6 @@ class ScoutView extends WatchUi.View {
         connectionInFlight = true;
         scanStatus = "CONNECT " + connectionAttemptNumber;
         connectionTimerPurpose = "CONNECT";
-
-
-
-
         connectionWatchdog.start(30000);
         ScoutLog.println("CQ:" + connectionAttemptNumber);
         try {
@@ -1534,7 +1416,6 @@ class ScoutView extends WatchUi.View {
         WatchUi.requestUpdate();
     }
 
-
     static function startScanWindow(purpose, windowMs) {
         if (windowMs > 0 && connectionTimerPurpose.equals("NONE") && !connectionInFlight) {
             connectionTimerPurpose = purpose;
@@ -1561,7 +1442,6 @@ class ScoutView extends WatchUi.View {
         ScoutLog.println("CF" + reason + ":" + connectionAttemptNumber +
             ":" + retryMs);
         noteDebug(reason.equals("TIMEOUT_NO_CALLBACK") ? "CONN TIMEOUT" : "CONN FAIL");
-        
         if (retryMs == RESCAN_AFTER_FAILURE_MS) {
             rescanAfterSession(false);
         } else {
@@ -1569,8 +1449,6 @@ class ScoutView extends WatchUi.View {
             connectionWatchdog.start(retryMs);
         }
     }
-
-
 
     static function rescanAfterSession(gotReading) {
         if (gotReading && targetBound && scheduleNextWake()) { return; }
@@ -1582,7 +1460,6 @@ class ScoutView extends WatchUi.View {
     static function wakeAnchored() {
         return lastWakeMs != null && System.getTimer() - lastWakeMs < WAKE_ANCHOR_MAX_MS;
     }
-
 
     static function scheduleNextWake() {
         if (!wakeAnchored()) { return false; }
@@ -1612,15 +1489,11 @@ class ScoutView extends WatchUi.View {
         scheduleNextWake();
     }
 
-
     static function onBoundScanResult(scanResult, name) {
         if (name == null || !namesMatch(name, targetName)) {
             return;
         }
-        // Refresh the original advertised spelling; bindTargetDevice persists
-        // it only after the sensor accepts the connection.
         targetName = name;
-        TARGET_NAME_UPPER = name.toUpper();
         var rssi = scanResult.getRssi();
         if (targetScanResult != null) {
             targetRssi = rssi;
@@ -1650,7 +1523,7 @@ class ScoutView extends WatchUi.View {
         extraDataCccdReady = false;
         authCccdReady = false;
         keksWriteScheduler.cancel();
-        mathRunner().cancel();
+        if (!prepRunning) { mathRunner().cancel(); }
         keksWatchdog.stop();
         freshKeksState = "OFF";
         clearFreshKeksSecrets();
@@ -1663,8 +1536,8 @@ class ScoutView extends WatchUi.View {
         g7Authenticated = false;
         g7Bonded = false;
 
-
-
+        forgetCharacteristics();
+        enableCharacteristicIndications(connectedDevice, UUID_EXTRA, "EXTRA", 0x01);
         if (scanning) {
             Ble.setScanState(Ble.SCAN_STATE_OFF);
         }
@@ -1674,11 +1547,6 @@ class ScoutView extends WatchUi.View {
             ":" + targetName + ":" + connectionAttemptNumber);
         noteDebug("CONNECTED #" + connectionAttemptNumber);
         describeGatt(connectedDevice);
-
-
-
-
-        enableCharacteristicIndications(connectedDevice, UUID_EXTRA, "EXTRA", 0x01);
     }
 
     static function enableCharacteristicIndications(connectedDevice, characteristicUuid, label, cccdValue) {
@@ -1703,15 +1571,12 @@ class ScoutView extends WatchUi.View {
                 ScoutLog.println("WM" + label + ":" + shortUuid(characteristicUuid));
                 return;
             }
-            ScoutLog.println("WQ" + label + ":" + cccdValue);
             cccd.requestWrite([cccdValue, 0x00]b);
+            ScoutLog.println("WQ" + label + ":" + cccdValue);
         } catch (exception) {
             ScoutLog.println("WX" + label + ":" + exception);
         }
     }
-
-
-
 
     static function runCryptoSelfTest() {
         var started = System.getTimer();
@@ -1739,7 +1604,6 @@ class ScoutView extends WatchUi.View {
         } catch (eAes) {
             ScoutLog.println("XA" + eAes);
         }
-
         ScoutLog.println("EC");
         var nativeStatus = KeksP256.calibrateNative();
         ScoutLog.println("CT" + shaOk +
@@ -1748,14 +1612,6 @@ class ScoutView extends WatchUi.View {
             ":" + KeksMathRunner.tickBudget() +
             ":" + System.getDeviceSettings().partNumber);
     }
-
-
-
-
-
-
-
-
 
     static const SLOT_RETRY_S = 24 * 3600;
     static const SLOT_REFUSED_AT_KEY = "g7SlotRefusedAt";
@@ -1769,7 +1625,6 @@ class ScoutView extends WatchUi.View {
             ":" + g7DisplayType);
         retryWatchSlotIfDue();
     }
-
 
     static function retryWatchSlotIfDue() {
         if (!slotPolicy.equals("phone")) { return; }
@@ -1790,41 +1645,15 @@ class ScoutView extends WatchUi.View {
             ":" + g7DisplayType + ":" + reason);
     }
 
-
-
-    static const SLOT_FORCE_KEY = "g7SlotForce";
-    static var forcedSlot = null;
-
-    static function forcedDisplayType() {
-        if (forcedSlot == null) {
-            var stored = null;
-            try { stored = Application.Storage.getValue(SLOT_FORCE_KEY); } catch (e) { stored = null; }
-            forcedSlot = (stored instanceof Lang.String && (stored.equals("02") || stored.equals("03"))) ? stored : "auto";
-        }
-        return forcedSlot.equals("02") ? 0x02 : (forcedSlot.equals("03") ? 0x03 : 0);
-    }
-
     static function policyDisplayType() {
-        if (ScoutCollector.isBoth()) { return 0x03; }
-        var forced = forcedDisplayType();
-        if (forced != 0) { return forced; }
-        return slotPolicy.equals("phone") ? 0x02 : 0x03;
-    }
-
-    static function onPhoneSlot(choice) {
-        if (!(choice instanceof Lang.String) || !(choice.equals("auto") || choice.equals("02") || choice.equals("03"))) {
-            ScoutLog.println("SOformat:" + g7DisplayType);
-            return;
-        }
-        try { Application.Storage.setValue(SLOT_FORCE_KEY, choice); } catch (e) { }
-        forcedSlot = choice;
-        applySlotChoice("phone-" + choice);
+        return ScoutCollector.displayType();
     }
 
     static function applySlotChoice(reason) {
         g7DisplayType = policyDisplayType();
-        ScoutLog.println("SO" + forcedSlot + ":" + g7DisplayType + ":" + reason);
+        ScoutLog.println("SO" + ScoutCollector.mode + ":" + g7DisplayType + ":" + reason);
         noteDebug("SLOT " + g7DisplayType);
+        WatchUi.requestUpdate();
     }
 
     static function saveSlotPolicy(policy, reason) {
@@ -1855,18 +1684,6 @@ class ScoutView extends WatchUi.View {
         return true;
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
     static var charExtra = null;
     static var charAuth = null;
     static var charControl = null;
@@ -1877,7 +1694,20 @@ class ScoutView extends WatchUi.View {
         else if (UUID_CONTROL.equals(uuid)) { charControl = characteristic; }
     }
 
+    static var extraCccdDescriptor = null;
+
+    static function extraCccd() {
+        if (extraCccdDescriptor == null) {
+            var characteristic = findCharacteristic(UUID_EXTRA);
+            if (characteristic != null) {
+                try { extraCccdDescriptor = characteristic.getDescriptor(Ble.cccdUuid()); } catch (e) { extraCccdDescriptor = null; }
+            }
+        }
+        return extraCccdDescriptor;
+    }
+
     static function forgetCharacteristics() {
+        extraCccdDescriptor = null;
         charExtra = null;
         charAuth = null;
         charControl = null;
@@ -1906,10 +1736,6 @@ class ScoutView extends WatchUi.View {
         return null;
     }
 
-
-
-
-
     static const DEFAULT_PAIRING_CODE = "----";
     static var pairingCode = null;
     static var pairingCodeStored = false;
@@ -1936,8 +1762,6 @@ class ScoutView extends WatchUi.View {
     static function isUsablePairingCode(code) {
         return isStorablePairingCode(code) && code.find("-") == null;
     }
-
-
 
     static function savePairingCode(code) {
         if (!isStorablePairingCode(code)) { return false; }
@@ -1967,19 +1791,15 @@ class ScoutView extends WatchUi.View {
         return true;
     }
 
-
     static function tryBeginConfiguredFreshKeks(source) {
         var code = getConfiguredPairingCode();
         if (!isUsablePairingCode(code) || !authCccdReady || !extraDataCccdReady ||
             device == null || !device.isConnected()) {
             return;
         }
-        ScoutLog.println("KT" + source);
         beginFreshKeks(code);
+        ScoutLog.println("KT" + source);
     }
-
-
-
 
     static function configuredQrBytes(partName, maxBytes) {
         var value = null;
@@ -2009,9 +1829,6 @@ class ScoutView extends WatchUi.View {
     }
 
     static var freshKeksActive = false;
-
-
-
     static const MATH_TIMEOUT_MS = 60000;
 
     static function isFreshKeksActive() {
@@ -2026,15 +1843,102 @@ class ScoutView extends WatchUi.View {
         return [0x73,0x65,0x72,0x76,0x65,0x72]b;
     }
 
+    static var prepCode = null;
+    static var prepRunning = false;
+    static var prepStartedMs = 0;
+    static var prepPartA = null;
+    static var prepPartB = null;
+    static var prepPartC = null;
+    static var prepPrivateScalar = null;
+    static var prepPassword = null;
+    static var prepX1 = null;
+    static var prepX2 = null;
+    static var prepLocal1 = null;
+    static var prepLocal2 = null;
+    static var beginWhenPrepared = false;
 
+    static function clearPrep() {
+        prepCode = null;
+        prepRunning = false;
+        prepPartA = null;
+        prepPartB = null;
+        prepPartC = null;
+        prepPrivateScalar = null;
+        prepPassword = null;
+        prepX1 = null;
+        prepX2 = null;
+        prepLocal1 = null;
+        prepLocal2 = null;
+    }
 
+    static function prepReadyFor(code) {
+        return !prepRunning && prepLocal1 != null && prepLocal2 != null &&
+            prepCode != null && prepCode.equals(code);
+    }
 
+    static function prepareFreshKeks(reason) {
+        var code = getConfiguredPairingCode();
+        if (freshKeksActive || prepRunning || !ScoutCollector.isWatch() ||
+            !isUsablePairingCode(code) || !isFourDigitPairingCode(code) ||
+            savedKeyUsable() || !KeksP256.nativeReady || prepReadyFor(code)) {
+            return;
+        }
+        var partA = configuredQrBytes("A", 4096);
+        var partB = configuredQrBytes("B", 4096);
+        var partC = configuredQrBytes("C", 4096);
+        if (partA == null || partB == null || partC == null ||
+            partA.size() <= 100 || partB.size() <= 100 || partC.size() <= 32) {
+            scanStatus = "NEED QR DATA";
+            ScoutLog.println("KNsetup-qr-material-missing-or-invalid");
+            return;
+        }
+        var privateScalar = KeksP256.extractPrivateScalarPkcs8(partC);
+        var x1 = KeksP256.randomScalar();
+        var x2 = KeksP256.randomScalar();
+        var v1 = KeksP256.randomScalar();
+        var v2 = KeksP256.randomScalar();
+        if (privateScalar == null || x1 == null || x2 == null || v1 == null || v2 == null) {
+            scanStatus = "SETUP FAILED";
+            ScoutLog.println("KNscalar-setup");
+            return;
+        }
+        clearPrep();
+        prepCode = code;
+        prepPartA = partA;
+        prepPartB = partB;
+        prepPartC = partC;
+        prepPrivateScalar = privateScalar;
+        prepPassword = KeksP256.passwordInteger(code);
+        prepX1 = x1;
+        prepX2 = x2;
+        prepRunning = true;
+        prepStartedMs = System.getTimer();
+        var runner = mathRunner();
+        runner.enqueue(new KeksMakeRound12Task(x1, v1, keksClientParty()), "PREP_ROUND1");
+        runner.enqueue(new KeksMakeRound12Task(x2, v2, keksClientParty()), "PREP_ROUND2");
+        ScoutLog.println("RPstart:" + reason + ":0");
+    }
 
-
-
-
-
-
+    static function onPrepMathComplete(action, task) {
+        if (!prepRunning) { return; }
+        if (task.result == null) {
+            ScoutLog.println("RPfailed:" + action.toLower() + ":" + (System.getTimer() - prepStartedMs));
+            clearPrep();
+            beginWhenPrepared = false;
+            return;
+        }
+        if (action.equals("PREP_ROUND1")) {
+            prepLocal1 = task.result;
+            return;
+        }
+        prepLocal2 = task.result;
+        prepRunning = false;
+        ScoutLog.println("RPready:-:" + (System.getTimer() - prepStartedMs));
+        if (beginWhenPrepared) {
+            beginWhenPrepared = false;
+            tryBeginConfiguredFreshKeks("prep-ready");
+        }
+    }
 
     static function beginFreshKeks(code) {
         if (!extraDataCccdReady || !authCccdReady || device == null || !device.isConnected()) {
@@ -2052,61 +1956,51 @@ class ScoutView extends WatchUi.View {
             ScoutLog.println("KNnative-ec-calibration-failed");
             return;
         }
-        var partA = configuredQrBytes("A", 4096);
-        var partB = configuredQrBytes("B", 4096);
-        var partC = configuredQrBytes("C", 4096);
-        if (partA == null || partB == null || partC == null ||
-            partA.size() <= 100 || partB.size() <= 100 || partC.size() <= 32) {
-            scanStatus = "NEED QR DATA";
-            ScoutLog.println("KNsetup-qr-material-missing-or-invalid");
-            return;
-        }
-
-
-
-        var privateScalar = KeksP256.extractPrivateScalarPkcs8(partC);
-        var x1 = KeksP256.randomScalar();
-        var x2 = KeksP256.randomScalar();
-        var v1 = KeksP256.randomScalar();
-        var v2 = KeksP256.randomScalar();
-        if (privateScalar == null || x1 == null || x2 == null || v1 == null || v2 == null) {
-            scanStatus = "SETUP FAILED";
-            ScoutLog.println("KNscalar-setup");
+        if (!prepReadyFor(code)) {
+            beginWhenPrepared = true;
+            prepareFreshKeks("begin");
+            if (!prepRunning) {
+                beginWhenPrepared = false;
+                return;
+            }
+            scanStatus = "KEKS PREP";
             return;
         }
         clearFreshKeksSecrets();
-        keksPassword = KeksP256.passwordInteger(code);
-        keksX1 = x1;
-        keksX2 = x2;
-        freshKeksPartA = partA;
-        freshKeksPartB = partB;
-        freshKeksPartC = partC;
-        freshKeksPrivateScalar = privateScalar;
+        keksPassword = prepPassword;
+        keksX1 = prepX1;
+        keksX2 = prepX2;
+        freshKeksPartA = prepPartA;
+        freshKeksPartB = prepPartB;
+        freshKeksPartC = prepPartC;
+        freshKeksPrivateScalar = prepPrivateScalar;
+        keksLocal1 = prepLocal1;
+        keksLocal2 = prepLocal2;
+        var prepAgeMs = System.getTimer() - prepStartedMs;
+        clearPrep();
         authProbeWatchdog.stop();
         freshKeksActive = true;
         keksRoundRxFirstAtMs = -1;
         keksRoundAckAtMs = -1;
         freshKeksState = "WAIT_ROUND1";
-        scanStatus = "KEKS R1";
-        var runner = mathRunner();
-        runner.cancel();
-        runner.enqueue(new KeksMakeRound12Task(x1, v1, keksClientParty()), "LOCAL_ROUND1");
-        runner.enqueue(new KeksMakeRound12Task(x2, v2, keksClientParty()), "LOCAL_ROUND2");
-        ScoutKeksWriteScheduler.keksAttempts += 1;
-
-
-
-
-
         ScoutKeksWriteScheduler.chunksWithResponse = false;
         ScoutKeksWriteScheduler.settleMode = 0;
+        queueKeks(null, [0x0A,0x00]b, "START_ROUND1");
+        scanStatus = "KEKS R1";
+        ScoutKeksWriteScheduler.keksAttempts += 1;
         ScoutLog.println("KB" + (pairingCodeStored ? "stored" : "default") +
             ":" + slotPolicy + "/" + g7DisplayType + ":" + ScoutKeksWriteScheduler.chunksWithResponse +
             ":" + ScoutKeksWriteScheduler.settleMode);
-
-
-        queueKeks(null, [0x0A,0x00]b, "START_ROUND1");
+        ScoutLog.println("RPused:-:" + prepAgeMs);
         WatchUi.requestUpdate();
+    }
+
+    static function queueKeksPaced(payload, commandBytes, label) {
+        if (!keksWriteScheduler.queuePaced(payload, commandBytes, label, UUID_AUTH, keksRoundFrameDoneMs)) {
+            abortFreshKeks(label.toLower() + "-write-queue-full");
+            return false;
+        }
+        return true;
     }
 
     static function queueKeks(payload, commandBytes, label) {
@@ -2156,9 +2050,6 @@ class ScoutView extends WatchUi.View {
         if (freshKeksActive) { abortFreshKeks("link-lost"); }
     }
 
-
-
-
     static function beginSavedKeyCertificates() {
         var partA = configuredQrBytes("A", 4096);
         var partB = configuredQrBytes("B", 4096);
@@ -2207,14 +2098,11 @@ class ScoutView extends WatchUi.View {
     }
 
     static function abortFreshKeks(reason) {
-
-
         var watchSlotFailed = freshKeksActive && keksAuthRequestSent && g7DisplayType == 0x03 &&
             (reason.equals("sensor-authentication-rejected") || reason.equals("sensor-auth-refresh-required"));
-
-
         var abortedState = freshKeksState;
         var rxBytes = keksRxCount;
+        if (prepRunning) { clearPrep(); }
         keksWatchdog.stop();
         keksWriteScheduler.cancel();
         mathRunner().cancel();
@@ -2226,7 +2114,6 @@ class ScoutView extends WatchUi.View {
             ":" + abortedState + ":" + rxBytes +
             ":" + (System.getTimer() - connectedAtMs));
         lastAbortConnectMs = System.getTimer() - connectedAtMs;
-        
         var shortState = abortedState.find("WAIT_") == 0 ?
             abortedState.substring(5, abortedState.length()) : abortedState;
         if (shortState.length() > 10) { shortState = shortState.substring(0, 10); }
@@ -2265,7 +2152,6 @@ class ScoutView extends WatchUi.View {
         bindTargetDevice("pairing");
         WatchUi.requestUpdate();
     }
-
 
     static function appendRx(value) {
         var room = keksRxBuffer.size() - keksRxCount;
@@ -2320,15 +2206,14 @@ class ScoutView extends WatchUi.View {
                 freshKeksState.equals("WAIT_ROUND3")) {
                 keksRoundRxFirstAtMs = System.getTimer();
             }
-
-            ScoutLog.println("K1" + freshKeksState + ":" + value.size());
+            keksRoundFirstChunk = value.size();
         }
-
         var extra = appendRx(value);
         if (extra > 0) {
             ScoutLog.println("KY" + extra);
         }
         if (keksRxCount < 160) { return; }
+        keksRoundFrameDoneMs = System.getTimer();
         var frame = keksRxBuffer;
         keksRxBuffer = null;
         keksRxCount = 0;
@@ -2355,19 +2240,11 @@ class ScoutView extends WatchUi.View {
 
     static function handleFreshKeksRoundPacket(frame) {
         keksWatchdog.stop();
-
-
-
-
-
         var roundState = freshKeksState;
         if (roundState.equals("WAIT_ROUND1")) {
             sendLocalRound(1);
-
-
             ScoutLog.println("ABsend-queued:1:" +
                 (keksRoundRxFirstAtMs < 0 ? -1 : System.getTimer() - keksRoundRxFirstAtMs));
-
             ScoutLog.println("ABack-queue:1:" +
                 (keksRoundAckAtMs < 0 ? -1 : System.getTimer() - keksRoundAckAtMs));
         } else if (roundState.equals("WAIT_ROUND2")) {
@@ -2375,6 +2252,8 @@ class ScoutView extends WatchUi.View {
             ScoutLog.println("ABsend-queued:2:" +
                 (keksRoundRxFirstAtMs < 0 ? -1 : System.getTimer() - keksRoundRxFirstAtMs));
         }
+        logRoundFrame(roundState);
+        WatchUi.requestUpdate();
         var parsed = KeksP256.parsePacket(frame);
         if (parsed == null) {
             abortFreshKeks("round-packet-parse-failed");
@@ -2401,11 +2280,26 @@ class ScoutView extends WatchUi.View {
         }
     }
 
+    static function logRoundFrame(roundState) {
+        ScoutLog.println("K1" + roundState + ":" + keksRoundFirstChunk);
+        var ack = keksDeferredAck;
+        keksDeferredAck = null;
+        if (ack != null) {
+            ScoutLog.println("KR" + true + ":" + ack[0] +
+                ":" + ack[1] + ":" + ack[2] +
+                ":" + ack[3] + ":" + ack[4] +
+                ":" + ack[5]);
+        }
+    }
+
+    static function keksRoundReceiving() {
+        return freshKeksActive && keksRxBuffer != null && keksRxCount < 160;
+    }
 
     static function sendLocalRound(n) {
         var packet = n == 1 ? (keksLocal1 == null ? null : keksLocal1[0]) :
             (n == 2 ? (keksLocal2 == null ? null : keksLocal2[0]) : keksLocal3);
-        if (packet == null) {
+        if (packet == null || (n == 3 && freshKeksSharedKey == null)) {
             keksPendingSend = n;
             freshKeksState = "SEND_ROUND" + n;
             scanStatus = "KEKS CALC";
@@ -2427,17 +2321,15 @@ class ScoutView extends WatchUi.View {
         }
     }
 
-
     static function queueLocalRound(n, packet) {
-        if (n == 1) { return queueKeks(packet, [0x0A,0x01]b, "ROUND1"); }
-        if (n == 2) { return queueKeks(packet, [0x0A,0x02]b, "ROUND2"); }
+        if (n == 1) { return queueKeksPaced(packet, [0x0A,0x01]b, "ROUND1"); }
+        if (n == 2) { return queueKeksPaced(packet, [0x0A,0x02]b, "ROUND2"); }
         var token = Cryptography.randomBytes(8);
         if (token == null || token.size() != 8) {
             abortFreshKeks("auth-token-generation-failed");
             return false;
         }
         freshKeksAuthToken = token;
-
         var authRequest = [0x02]b;
         authRequest.addAll(token);
         authRequest.add(g7DisplayType);
@@ -2456,11 +2348,16 @@ class ScoutView extends WatchUi.View {
     }
 
     static function onKeksMathComplete(action, task) {
+        if (action.equals("PREP_ROUND1") || action.equals("PREP_ROUND2")) {
+            onPrepMathComplete(action, task);
+            return;
+        }
         if (!freshKeksActive) { return; }
         var runner = mathRunner();
         ScoutLog.println("KM" + action +
             ":" + (task.result != null) + ":" + runner.taskElapsedMs() +
-            ":" + runner.taskTicks() + ":" + runner.maxTickSpent);
+            ":" + runner.taskTicks() + ":" + runner.maxTickSpent +
+            ":" + runner.taskQueueDelayMs() + ":" + runner.taskHoldMs());
         if (action.find("VERIFY") != null) {
             var verifiedRound = action.equals("VERIFY_ROUND1") ? 1 : 2;
             ScoutLog.println("ABproof-done:" + verifiedRound + ":" +
@@ -2492,16 +2389,13 @@ class ScoutView extends WatchUi.View {
                 keksPendingAuthReply = null;
                 processAuthReply(reply);
             }
+            if (keksPendingSend == 3) { sendLocalRound(3); }
         } else if (action.equals("SIGN_CHALLENGE")) {
             freshKeksState = "WAIT_POST_CHALLENGE";
             scanStatus = "KEKS SIGN-s";
             queueKeks(task.result, [0x0D,0x00,0x02]b, "SIGNATURE_RESPONSE");
         }
-
-
     }
-
-
 
     static function processAuthReply(value) {
         var tokenPlain = new [16]b;
@@ -2521,7 +2415,6 @@ class ScoutView extends WatchUi.View {
         }
         for (var k = 0; k < 8; k += 1) {
             if ((expected[k] & 0xFF) != (value[k + 1] & 0xFF)) {
-
                 markWrongName();
                 abortFreshKeks("auth-challenge-proof-mismatch");
                 return;
@@ -2551,12 +2444,6 @@ class ScoutView extends WatchUi.View {
             return;
         }
         var opcode = value[0] & 0xFF;
-        ScoutLog.println("KI" + opcode + ":" + value.size() +
-            ":" + freshKeksState);
-
-
-
-
 
         if (opcode == 0x0A &&
             (freshKeksState.equals("WAIT_ROUND1") ||
@@ -2567,20 +2454,22 @@ class ScoutView extends WatchUi.View {
             var ackStatus = value.size() > 1 ? (value[1] & 0xFF) : -1;
             var ackRound = value.size() > 2 ? (value[2] & 0xFF) : -1;
             var matched = value.size() == 3 && ackStatus == 0 && ackRound == expectedRound;
-            if (matched && freshKeksState.equals("WAIT_ROUND1")) {
-                keksRoundAckAtMs = System.getTimer();
+            if (matched) {
+                if (freshKeksState.equals("WAIT_ROUND1")) { keksRoundAckAtMs = System.getTimer(); }
+                keksDeferredAck = [value.size(), ackStatus, ackRound, expectedRound, keksRxCount, freshKeksState];
+                return;
             }
+            ScoutLog.println("KI" + opcode + ":" + value.size() +
+                ":" + freshKeksState);
             ScoutLog.println("KR" + matched + ":" + value.size() +
                 ":" + ackStatus + ":" + ackRound +
                 ":" + expectedRound + ":" + keksRxCount +
                 ":" + freshKeksState);
-
-
             if (ackStatus != 0) { noteDebug("0A ERR s" + ackStatus + " p" + ackRound); }
-
-
             return;
         }
+        ScoutLog.println("KI" + opcode + ":" + value.size() +
+            ":" + freshKeksState);
 
         if (freshKeksState.equals("WAIT_CERT_A_HEADER") ||
             freshKeksState.equals("WAIT_CERT_B_HEADER")) {
@@ -2610,8 +2499,6 @@ class ScoutView extends WatchUi.View {
         }
 
         if (freshKeksState.equals("WAIT_SIGN_CHALLENGE")) {
-
-
             if (value.size() < 18 || (value[1] & 0xFF) != 0 ||
                 freshKeksPrivateScalar == null) {
                 abortFreshKeks("invalid-sign-challenge");
@@ -2664,9 +2551,6 @@ class ScoutView extends WatchUi.View {
             }
 
             if (freshKeksState.equals("WAIT_POST_CHALLENGE")) {
-
-
-
                 freshKeksState = "WAIT_BOND_TRIGGER";
                 scanStatus = "KWAIT TRIG";
                 queueKeks(null, [0x06,0x19]b, "TIME_EXTENDED_BOND_STEP");
@@ -2684,8 +2568,6 @@ class ScoutView extends WatchUi.View {
             }
             keksWatchdog.stop();
             if (freshKeksSharedKey == null) {
-
-
                 keksPendingAuthReply = value;
                 keksWatchdog.start(MATH_TIMEOUT_MS);
                 ScoutLog.println("KUshared-key-pending");
@@ -2713,8 +2595,6 @@ class ScoutView extends WatchUi.View {
                 enableCharacteristicIndications(device, UUID_CONTROL, "CONTROL", 0x02);
             } else if (authenticated) {
                 ScoutLog.println("KGtrue:false:validated");
-
-
                 keksPassword = null;
                 keksX1 = null;
                 keksX2 = null;
@@ -2728,7 +2608,6 @@ class ScoutView extends WatchUi.View {
         abortFreshKeks("auth-indication-in-wrong-state");
     }
 
-
     static function requestGlucose() {
         if (device == null || !device.isConnected() || sessionTerminal) { return; }
         if (!keksWriteScheduler.queue(null, [0x4E]b, "GLUCOSE_REQUEST", UUID_CONTROL)) {
@@ -2739,9 +2618,6 @@ class ScoutView extends WatchUi.View {
         ScoutLog.println("GQ4E");
     }
 
-
-
-
     static const SAVED_KEY_AUTH_TIMEOUT_MS = 15000;
 
     static function sendAuthRequestProbe() {
@@ -2750,12 +2626,9 @@ class ScoutView extends WatchUi.View {
         var packet = [0x02]b;
         savedAuthToken = Cryptography.randomBytes(8);
         packet.addAll(savedAuthToken);
-
-
         retryWatchSlotIfDue();
         savedAuthDisplayType = g7DisplayType;
         packet.add(savedAuthDisplayType);
-
         savedKeyCipher = loadSavedKeyCipher();
         if (!keksWriteScheduler.queue(null, packet, "SAVED_AUTH_REQUEST", UUID_AUTH)) {
             ScoutLog.println("SVwrite-queue-full");
@@ -2769,7 +2642,6 @@ class ScoutView extends WatchUi.View {
         WatchUi.requestUpdate();
     }
 
-
     static function onSavedAuthSlotOutcome(accepted, reason) {
         if (savedAuthDisplayType != 0x03) { return; }
         savedAuthDisplayType = 0;
@@ -2778,7 +2650,6 @@ class ScoutView extends WatchUi.View {
         } else if (reason.equals("rejected") || reason.equals("refresh")) {
             saveSlotPolicy("phone", "watch-slot-saved-" + reason);
         } else {
-
             ScoutLog.println("SG" + slotPolicy + ":" + g7DisplayType + ":kept-after-" + reason);
         }
     }
@@ -2799,11 +2670,6 @@ class ScoutView extends WatchUi.View {
         WatchUi.requestUpdate();
     }
 
-
-
-
-
-
     static function hasSavedAuthKey() {
         var keyText = null;
         try { keyText = Application.Storage.getValue("savedAuthKeyHex"); } catch (e) { keyText = null; }
@@ -2812,7 +2678,6 @@ class ScoutView extends WatchUi.View {
         }
         return keyText instanceof Lang.String && keyText.length() == 32;
     }
-
 
     static var savedKeyCipher = null;
     static var savedAuthToken = null;
@@ -2844,10 +2709,6 @@ class ScoutView extends WatchUi.View {
                 ScoutLog.println("KK");
                 return false;
             }
-
-
-
-
             if (!savedKeyProofMatches(cipher, authReply)) {
                 refuseSavedKeyForWatch();
                 return false;
@@ -2880,8 +2741,6 @@ class ScoutView extends WatchUi.View {
         return false;
     }
 
-
-
     static function savedKeyProofMatches(cipher, authReply) {
         if (savedAuthToken == null || savedAuthToken.size() != 8) {
             ScoutLog.println("SMunknown");
@@ -2901,9 +2760,6 @@ class ScoutView extends WatchUi.View {
         noteDebug(match ? "KEY MATCHES" : "KEY MISMATCH");
         return match;
     }
-
-
-
 
     static const KEY_REFUSED_KEY = "g7SavedKeyRefused";
 
@@ -2942,7 +2798,6 @@ class ScoutView extends WatchUi.View {
         }
         return -1;
     }
-
 
     static function readUInt16LE(bytes, offset) {
         return (bytes[offset] & 0xFF) | ((bytes[offset + 1] & 0xFF) << 8);
@@ -2990,7 +2845,6 @@ class ScoutView extends WatchUi.View {
         var calibration = bytes[18] & 0xFF;
         var glucoseIsDisplayOnly = (calibration & 0x10) != 0;
 
-
         var terminal = algorithmState == 1 || algorithmState == 15 ||
             algorithmState == 16 || algorithmState == 17 ||
             algorithmState == 22 || algorithmState == 24 ||
@@ -3027,8 +2881,6 @@ class ScoutView extends WatchUi.View {
         glucoseReceivedAtMs = System.getTimer();
         glucoseHasValue = false;
         glucoseValue = -1;
-
-
 
         if (algorithmState == 6 && rawGlucose != 0xFFFF && age <= 900 &&
             !glucoseIsDisplayOnly) {
@@ -3083,8 +2935,6 @@ class ScoutView extends WatchUi.View {
         }
         bondAttempted = true;
         try {
-
-
             device.requestBond();
             ScoutLog.println("BRpost-keks-protocol-signal");
             return true;
@@ -3094,9 +2944,6 @@ class ScoutView extends WatchUi.View {
             return false;
         }
     }
-
-
-
 
     static function describeGatt(connectedDevice) {
         forgetCharacteristics();
@@ -3150,7 +2997,6 @@ class ScoutView extends WatchUi.View {
         var age = glucoseAgeSeconds;
         if (glucoseReceivedAtMs >= 0) {
             var elapsedMs = System.getTimer() - glucoseReceivedAtMs;
-
             if (elapsedMs > 0) {
                 age += (elapsedMs / 1000).toNumber();
             }
@@ -3163,12 +3009,10 @@ class ScoutView extends WatchUi.View {
         return glucoseHasValue && age >= 0 && age <= 900;
     }
 
-
     static function retryRemainingMs() {
         if (!connectionTimerPurpose.equals("RETRY_DELAY") && !connectionTimerPurpose.equals("WAKE_WAIT")) { return -1; }
         return ScoutClock.get().remainingMs("connection");
     }
-
 
     static function drawStatusText(dc, centerX, y, maxWidth, text) {
         var fonts = retryRemainingMs() >= 0 ?
@@ -3199,7 +3043,6 @@ class ScoutView extends WatchUi.View {
         }
         var age = effectiveGlucoseAgeSeconds();
         if ((glucoseHasValue && age > 900) || scanStatus.equals("DATA STALE")) {
-
             return (device != null && device.isConnected()) ? "CONNECTED" : "WAIT SENSOR";
         }
         if (device != null && device.isConnected() && hasCurrentGlucose()) { return "G7 DATA"; }
@@ -3208,7 +3051,6 @@ class ScoutView extends WatchUi.View {
         }
         return scanStatus;
     }
-
 
     static function statusRowText() {
         var text = statusTextForUi();
@@ -3255,15 +3097,12 @@ class ScoutView extends WatchUi.View {
     }
 
     static function timestamp() {
-
-
         var t = System.getClockTime();
         return twoDigits(t.hour) + ":" + twoDigits(t.min) + ":" +
             twoDigits(t.sec);
     }
 
     static function logTimestamp() {
-
         return timestamp() + "+" + System.getTimer();
     }
 
@@ -3275,16 +3114,11 @@ class ScoutView extends WatchUi.View {
         if (bytes == null) {
             return "<null>";
         }
-
-
         return (StringUtil.convertEncodedString(bytes, {
             :fromRepresentation => StringUtil.REPRESENTATION_BYTE_ARRAY,
             :toRepresentation => StringUtil.REPRESENTATION_STRING_HEX
         }) as Lang.String).toUpper();
     }
-
-
-
 
     static const MAX_TRACKED_DEVICES = 48;
 
@@ -3304,10 +3138,9 @@ class ScoutView extends WatchUi.View {
             deviceRssi.add(rssi);
             deviceHits.add(0);
             deviceCount = seenResults.size();
-
-            var upper = deviceNames[index].toUpper();
-            if ((upper.length() >= 4 && upper.substring(0, 4).equals("DXCM")) ||
-                (upper.length() >= 6 && upper.substring(0, 6).equals("DEXCOM"))) {
+            var deviceName = deviceNames[index];
+            if ((deviceName.length() >= 4 && deviceName.substring(0, 4).equals("DXCM")) ||
+                (deviceName.length() >= 6 && deviceName.substring(0, 6).equals("DEXCOM"))) {
                 ScoutLog.println("NW" + index +
                     ":" + deviceNames[index] + ":" + rssi);
             } else {
@@ -3349,10 +3182,6 @@ class ScoutView extends WatchUi.View {
         ScoutLog.println("VS" + scanning +
             ":" + (device != null && device.isConnected()) +
             ":" + retryScanActive);
-
-
-
-
         if (!scanning && !connectionInFlight && !retryScanActive &&
             !sessionTerminal && (device == null || !device.isConnected())) {
             startScan(false, false, "view-resume");
@@ -3362,9 +3191,6 @@ class ScoutView extends WatchUi.View {
     function onHide() {
         dashboardShown = false;
         ScoutClock.get().cancel("uiRefresh");
-
-
-
         ScoutLog.println("VH" + scanning +
             ":" + (device != null && device.isConnected()));
     }
@@ -3388,8 +3214,6 @@ class ScoutView extends WatchUi.View {
         if (showValue && previousGlucoseValue >= 0) {
             drawTrendIndicator(dc, centerX + 35, height * 0.32);
         }
-
-
 
         dc.drawLine(width * 0.22, height * 0.46, width * 0.78, height * 0.46);
         dc.drawText(centerX, height * 0.49, Graphics.FONT_NUMBER_MILD,

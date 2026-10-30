@@ -16,14 +16,19 @@ class SensorNameCaseTests(unittest.TestCase):
         matching = section("static function namesMatch(", "static function loadTargetBinding(")
         self.assertIn("left.toUpper().equals(right.toUpper())", matching)
         scan = section("function onScanResults(scanResults)", "function onScanStateChange(")
-        self.assertIn("name.toUpper()", scan)
-        self.assertIn('normalizedName.substring(0, 4).equals("DXCM")', scan)
+        self.assertIn("ScoutView.namesMatch(candidateName, ScoutView.targetName)", scan)
+        self.assertIn("var matchingName = candidateName.toUpper();", scan)
+        self.assertIn('matchingName.substring(0, 4).equals("DXCM")', scan)
+        # No upper-cased copy of the target name is kept.
+        self.assertNotIn("TARGET_NAME_UPPER", APP)
 
     def test_candidate_names_are_stored_in_original_case(self):
         offer = section("static function offerUnboundCandidate(", "static const SEEN_NAMES_KEY")
-        self.assertIn("seenCandidates.add(name);", offer)
-        self.assertIn('Application.Storage.setValue("g7LastTriedName", name);', offer)
-        self.assertNotIn('Application.Storage.setValue("g7LastTriedName", upper);', offer)
+        self.assertIn("var candidateName = name;", offer)
+        self.assertIn("seenCandidates.add(candidateName);", offer)
+        self.assertIn('Application.Storage.setValue("g7LastTriedName", candidateName);', offer)
+        self.assertIn("targetName = candidateName;", offer)
+        self.assertNotIn("toUpper()", offer)
 
     def test_wrong_and_seen_lists_match_without_normalizing_storage(self):
         wrong = section("static function isWrongName(", "static function markWrongName(")
@@ -36,7 +41,6 @@ class SensorNameCaseTests(unittest.TestCase):
         bound = section("static function onBoundScanResult(", "static function markConnected(")
         self.assertIn("!namesMatch(name, targetName)", bound)
         self.assertIn("targetName = name;", bound)
-        self.assertIn("TARGET_NAME_UPPER = name.toUpper();", bound)
         self.assertIn('Application.Storage.setValue("g7DeviceName", targetName)', APP)
 
 

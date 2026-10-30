@@ -151,6 +151,16 @@
       ]
     ]
   },
+  "CL": {
+    "event": "COLLECTOR",
+    "variants": [
+      [
+        "collector",
+        "source",
+        "changedAt"
+      ]
+    ]
+  },
   "CN": {
     "event": "CONNECT_RETURN",
     "variants": [
@@ -861,6 +871,14 @@
       ]
     ]
   },
+  "P1": {
+    "event": "PHONE_CAPABILITIES",
+    "variants": [
+      [
+        "event"
+      ]
+    ]
+  },
   "PC": {
     "event": "PAIRING_CODE_SET",
     "variants": [
@@ -889,6 +907,59 @@
     "variants": [
       [
         "error"
+      ]
+    ]
+  },
+  "PF": {
+    "event": "PHONE_LINK_REGISTER_FAILED",
+    "variants": [
+      [
+        "error"
+      ]
+    ]
+  },
+  "PG": {
+    "event": "PHONE_GLUCOSE_SENT",
+    "variants": [
+      [
+        "sequence",
+        "result"
+      ]
+    ]
+  },
+  "PJ": {
+    "event": "PHONE_KEY_REJECTED",
+    "variants": [
+      [
+        "reason=\"format\""
+      ],
+      [
+        "reason=\"storage\"",
+        "error"
+      ]
+    ]
+  },
+  "PK": {
+    "event": "PHONE_KEY_STORED",
+    "variants": [
+      [
+        "keyBytes=\"16\"",
+        "keySensorKnown"
+      ]
+    ]
+  },
+  "PL": {
+    "event": "PHONE_LINK_REGISTERED",
+    "variants": [
+      []
+    ]
+  },
+  "PM": {
+    "event": "PHONE_MSG",
+    "variants": [
+      [
+        "type",
+        "fields"
       ]
     ]
   },
@@ -935,6 +1006,28 @@
         "status",
         "ignored=\"true\"",
         "reason"
+      ]
+    ]
+  },
+  "RK": {
+    "event": "KEKS_ROUND_PACE",
+    "variants": [
+      [
+        "purpose",
+        "keepAliveReads",
+        "maxReadMs",
+        "chainBroken",
+        "commandSinceFrameMs"
+      ]
+    ]
+  },
+  "RP": {
+    "event": "KEKS_PREPARE",
+    "variants": [
+      [
+        "stage",
+        "reason",
+        "elapsedMs"
       ]
     ]
   },
