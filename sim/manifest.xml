@@ -4,6 +4,10 @@
         <iq:products>
             <iq:product id="fr255"/>
             <iq:product id="fr255m"/>
+            <iq:product id="epix2"/>
+            <iq:product id="epix2pro42mm"/>
+            <iq:product id="epix2pro47mm"/>
+            <iq:product id="epix2pro51mm"/>
         </iq:products>
         <iq:permissions>
             <iq:uses-permission id="BluetoothLowEnergy" />

@@ -15,7 +15,7 @@ This is a **community testing project**, not a medical device. It is not validat
 
 ## Before testing
 
-1. Confirm your watch model is listed in `manifest.xml`. The project is intended to support compatible BLE-capable Connect IQ watches, including Fenix models, but each model still needs compile and physical-device validation.
+1. Confirm your watch model is listed in `manifest.xml`. The project is intended to support compatible BLE-capable Connect IQ watches, including Fenix models, but each model still needs compile and physical-device validation. The epix (Gen 2) and epix Pro (Gen 2) builds have been run against the simulated sensor (pairing, saved-key login and reading, within the watch's 240,000-instruction watchdog) and the dashboard checked on their 416×416 screen; no physical epix result yet.
 2. Build the app using the Garmin Connect IQ SDK and your own developer signing key.
 3. Install it using Garmin's supported developer workflow.
 4. Open the app and enter **your own sensor's four-digit pairing code** in the pairing-code menu. The default is `----`, which disables pairing until you enter a code.

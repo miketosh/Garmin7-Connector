@@ -43,14 +43,24 @@ class KeksMathRunner {
 
     // SDK 9.3.0 device profiles: the execution watchdog is 240,000 VM
     // instructions on Forerunner 255 Music / 255S Music (006-B3990/B3991)
-    // and 120,000 on Forerunner 255 / 255S. A new stage starts only while
-    // spent < budget and the costliest stage is ~87k, so the worst callback is
-    // ~187k (fr255m) or ~97k (fr255). Simulator sweep: budgets of 160 (fr255m)
-    // and 70 (fr255) trip the watchdog; 130 and 55 do not.
+    // and on epix (Gen 2) / epix Pro (Gen 2) (006-B3943/B3944, B4312-B4314,
+    // B4542, B4556; a tester's watch, 2026-10-30), and 120,000 on Forerunner
+    // 255 / 255S. A new stage starts only while spent < budget and the
+    // costliest stage is ~87k, so the worst callback is ~187k (240k devices)
+    // or ~97k (others). Simulator sweep: budgets of 160 (fr255m) and 70
+    // (fr255) trip the watchdog; 130 and 55 do not. Unlisted parts keep 10.
+    static const WATCHDOG_240K_PARTS = [
+        "006-B3990-00", "006-B3991-00",
+        "006-B3943-00", "006-B3944-00", "006-B4312-00", "006-B4313-00",
+        "006-B4314-00", "006-B4542-00", "006-B4556-00"
+    ];
+
     static function tickBudget() {
         var part = System.getDeviceSettings().partNumber;
-        if (part != null && (part.equals("006-B3990-00") || part.equals("006-B3991-00"))) {
-            return 100;
+        if (part != null) {
+            for (var i = 0; i < WATCHDOG_240K_PARTS.size(); i += 1) {
+                if (part.equals(WATCHDOG_240K_PARTS[i])) { return 100; }
+            }
         }
         return 10;
     }
