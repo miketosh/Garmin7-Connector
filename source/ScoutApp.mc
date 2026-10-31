@@ -449,6 +449,12 @@ class ScoutConnectionWatchdog {
     function onTimeout() { ScoutView.onConnectionTimer(); }
 }
 
+class ScoutPassOverTimer {
+    function initialize() { }
+    function start(delayMs) { ScoutClock.get().schedule("passOver", delayMs, method(:onTimeout)); }
+    function onTimeout() { ScoutView.onPassOverEnded(); }
+}
+
 class ScoutProfileRegistrationWatchdog {
     function initialize() { }
     function start(delayMs) { ScoutClock.get().schedule("profileRegistration", delayMs, method(:onTimeout)); }
@@ -886,6 +892,7 @@ class ScoutView extends WatchUi.View {
     static var connectionAttemptNumber = 0;
     static var maxConnectionAttempts = 2;
     static var connectionWatchdog = new ScoutConnectionWatchdog();
+    static var passOverTimer = new ScoutPassOverTimer();
     static var connectionTimerPurpose = "NONE";
     static var retryScanActive = false;
     static var device = null;
@@ -1185,6 +1192,7 @@ class ScoutView extends WatchUi.View {
             if (passedOverMs == null || System.getTimer() - passedOverMs > PASS_OVER_SPAN_MS) {
                 passedOverMs = System.getTimer();
                 ScoutLog.println("DA:" + ALTERNATE_WAIT_MS);
+                passOverTimer.start(ALTERNATE_WAIT_MS);
                 return;
             }
             if (System.getTimer() - passedOverMs < ALTERNATE_WAIT_MS) { return; }
@@ -1197,6 +1205,16 @@ class ScoutView extends WatchUi.View {
         ScoutLog.println("DC");
         noteDebug("TRY " + name);
         onTargetFound(scanResult, name, rssi);
+    }
+
+    // A scan reports an advertiser once unless its advertising restarts, so a
+    // name passed over is seen again only after a rescan (a nonstop advertiser
+    // was never tried again, 2026-10-31).
+    static function onPassOverEnded() {
+        if (!scanning || targetScanResult != null || connectionAttempted || connectionInFlight) { return; }
+        try { Ble.setScanState(Ble.SCAN_STATE_OFF); } catch (e) { }
+        scanning = false;
+        startScan(false, retryScanActive, "pass-over");
     }
 
     static const SEEN_NAMES_KEY = "g7SeenNames";
