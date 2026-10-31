@@ -6,8 +6,8 @@ This is a **community testing project**, not a medical device. It is not validat
 
 ## Current status
 
-- Fresh KEKS pairing and authentication are experimental.
-- Experimental pairing timing (2026-10-30, not yet confirmed on a watch): on a Forerunner 255 Music the G7 accepted a write only within about 70 ms after its own transmission; a later write waited for its next ~3 s beat. The watch now computes its first two pairing rounds while it scans, requests the ExtraData subscription and the first round command before any logging, and paces each round answer (one chunk at once, the rest about 0.84 s after the sensor's frame while CCCD reads keep the link busy).
+- Fresh KEKS pairing and authentication remain experimental.
+- **Timing evidence is from the private Scout physical-watch investigation, not a successful Connector pairing.** Scout build 423 logs showed that the first `0A 00` write was acknowledged promptly, but a pending CCCD keep-alive read blocked the paced round-1 response; all 10 connected attempts lost the link in `WAIT_ROUND2`. Earlier observations suggest the G7 may accept writes only within a short window after its own transmission. Connector carries the corresponding prepared-round and paced-response experiment, but its own physical-watch success has not been established. See the Scout [BLE handshake guide](https://github.com/miketosh/garmin7-scout/blob/main/docs/BLE_HANDSHAKE_FIELD_GUIDE.md) and [runtime timing report](https://github.com/miketosh/garmin7-scout/blob/main/docs/CONNECT_IQ_RUNTIME_CONSTRAINTS.md).
 - Automated tests and simulator sessions do not prove successful pairing with a real sensor.
 - Physical-watch testing is required. Please report exact watch model, app commit/build, and sanitized diagnostic details when asking for help.
 - Direct watch-to-sensor testing does not require xDrip. An optional phone bridge to an xDrip+ build with the Garmin watch module can set the collector mode, hand the watch a saved sensor key and receive its readings; see [docs/PHONE_BRIDGE.md](docs/PHONE_BRIDGE.md).
@@ -18,7 +18,7 @@ This is a **community testing project**, not a medical device. It is not validat
 1. Confirm your watch model is listed in `manifest.xml`. The project is intended to support compatible BLE-capable Connect IQ watches, including Fenix models, but each model still needs compile and physical-device validation. The epix (Gen 2) and epix Pro (Gen 2) builds have been run against the simulated sensor (pairing, saved-key login and reading, within the watch's 240,000-instruction watchdog) and the dashboard checked on their 416×416 screen; no physical epix result yet.
 2. Build the app using the Garmin Connect IQ SDK and your own developer signing key.
 3. Install it using Garmin's supported developer workflow.
-4. Open the app and enter **your own sensor's four-digit pairing code** in the pairing-code menu. The default is `----`, which disables pairing until you enter a code.
+4. Open the app and enter **your own sensor's four-digit pairing code** in the pairing-code menu. The default is `----`, which disables collection entirely: the app does not scan or connect, including when a sensor identity or saved key was learned previously.
 5. Check **Collector** in the menu: the default *Watch as Watch* asks the sensor for its watch slot (`03`), which can coexist with a phone app on slot `02`. *Watch as App* uses slot `02` and must not share it with a phone app; *None* and *Phone as App* keep the watch off. See [docs/PHONE_BRIDGE.md](docs/PHONE_BRIDGE.md).
 6. Keep your normal CGM and pump workflows available. This experiment is not a reliable glucose source.
 7. Capture the watch's Connect IQ log locally if a test fails. Review it before sharing; remove personal identifiers, any glucose values you do not want to disclose, and credentials or pairing material.
