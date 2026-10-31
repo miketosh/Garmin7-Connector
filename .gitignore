@@ -12,3 +12,4 @@ dist/
 *.prg
 *.iq
 .secrets/
+__pycache__/
