@@ -4,6 +4,8 @@ This reference documents the compact watch-log format and event mappings used by
 
 Each compact record is `<milliseconds since previous line><two-character code><value1>:<value2>:...`. A log begins with `@<watch timer> <HHMMSS>`; an uploaded capture may use `@<first timer> <HHMMSS at upload> <timer at upload>`. The decoder restores approximate wall-clock timestamps and labels fields according to the code table.
 
+> **Known limitation (2026-11-01):** Connector intentionally emits privacy-reduced records, but some variants in `tools/log_codes.json` still describe the longer Scout records. The generated table below therefore does not accurately label every Connector record. See **Known source-vs-mapping mismatches** at the end; for those codes, preserve and interpret raw positional values rather than trusting the decoder's field names. This note documents the limitation only; it does not change decoder behavior.
+
 ## Event mapping
 
 | Code | Event | Field variants |
@@ -149,3 +151,23 @@ Each compact record is `<milliseconds since previous line><two-character code><v
 - The table must match the build that produced the log. Use the versioned table from that commit when decoding older captures.
 - Constants written as `name="value"` identify fixed values; bare quoted values are literal text. The decoder preserves lines it cannot interpret.
 - Logs can contain device names, advertisement bytes, glucose readings, and other identifying or sensitive details. Inspect and sanitize them before sharing.
+
+
+## Known source-vs-mapping mismatches (2026-11-01)
+
+A source review of `source/ScoutApp.mc` and `source/ScoutPhoneLink.mc` found these differences between the privacy-reduced records currently emitted by Connector and the longer variants in `tools/log_codes.json`:
+
+| Code | Current Connector record shape | Difference from the mapping |
+|---|---|---|
+| `LS` | `LS` (no fields) | Mapping lists `name,state,connected`. |
+| `GL` | `GL<seq>:<ageSec>:<displayOnly>:<algorithmState>` | Four values are emitted; the mapping lists eleven. |
+| `DK`, `DW`, `DC`, `DD` | Code only (no fields) | Mapping lists candidate/name/key/source fields that Connector does not emit. |
+| `DA` | `DA:<waitMs>` | Connector emits the wait duration only, not a candidate name. |
+| `DN` | `DN:<count>` | Connector emits the wrong-name count only, not the name or pairing code. |
+| `CQ` | `CQ:<attempt>` | Connector emits the attempt number only, not name/RSSI/strategy. |
+| `CO` | `CO<opcode>:<payloadLength>` | The second value is the payload length, not payload data. |
+| `CA` | `CAsensor-reported-terminal-state:<state>`; `CAno-pairing-code`; `CAtarget-not-seen`; `CAprofile-registration-failed:240` | The `target-not-seen` variant has no target field in Connector. |
+| `SE` | Candidate: `SE<name>:<rssi>:<hits>:<P-or-U>:<FEBC-or->:<rawAdvertisementHex>`; connection: `SE:<rssi>` | The connection variant contains only RSSI, not name and advertisement. |
+| `PM` | `PM<type>:<fieldCount>` | The second value is the field count/size, not the field contents. |
+
+These are schema/documentation findings, not a decoder fix. The mapping file is executable tooling data consumed by the local decoder; reconciling it and its tests requires a separate tooling change outside this documentation-only pass. Until then, do not treat decoded field names for these variants as authoritative.
