@@ -24,6 +24,15 @@ class PassOverRescanTests(unittest.TestCase):
                         ended.index('startScan(false, retryScanActive, "pass-over");'))
         self.assertIn('ScoutClock.get().schedule("passOver", delayMs, method(:onTimeout));', APP)
 
+    def test_a_name_is_passed_over_at_most_one_wake_in_a_row(self):
+        # A G7 stops advertising within the wait, so restarting the pass-over
+        # each wake starved the only name in range (Scout builds 429-430).
+        offer = section("static function offerUnboundCandidate(", "static function onPassOverEnded()")
+        self.assertIn("            if (passedOverMs == null) {", offer)
+        self.assertNotIn("PASS_OVER_SPAN_MS", APP)
+        self.assertLess(offer.index("passedOverMs = null;\n        lastTriedName = candidateName;"),
+                        offer.index("onTargetFound("))
+
 
 if __name__ == "__main__":
     unittest.main()

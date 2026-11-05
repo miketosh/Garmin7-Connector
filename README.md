@@ -89,7 +89,7 @@ The original input is not modified. Older long-format log lines and unrecognized
 
 ## Sensor-name matching
 
-Before a sensor is bound, the name tried last is passed over for up to 12 s while the app looks for another G7 name. A Connect IQ scan reports an advertiser once unless its advertising restarts. So when the wait ends with nothing chosen, the scan restarts, and the passed-over name is taken. Without the restart, a sensor that advertises nonstop (such as a test peripheral) was never tried again (Scout, 2026-10-31).
+Before a sensor is bound, the name tried last is passed over for up to 12 s while the app looks for another G7 name. A Connect IQ scan reports an advertiser once unless its advertising restarts. So when the wait ends with nothing chosen, the scan restarts, and the passed-over name is taken. Without the restart, a sensor that advertises nonstop (such as a test peripheral) was never tried again (Scout, 2026-10-31). A real G7 usually stops advertising within the 12 s, so the passed-over name is taken at its next sighting: a name is passed over at most one wake in a row. Before that change the only G7 in range was passed over at every wake and never tried (Scout builds 429-430, 2026-11-05). Not yet run on a watch.
 
 Advertised G7 names are compared case-insensitively so a change in Bluetooth name capitalization does not create a second logical sensor. The app preserves the original spelling received from the advertisement when saving `g7DeviceName`, `g7LastTriedName`, `g7SeenNames`, and wrong-name entries. Uppercase strings are temporary comparison keys only. When a previously bound sensor is seen again, its current advertised spelling is refreshed and persisted after the sensor accepts the connection.
 

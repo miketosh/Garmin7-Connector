@@ -847,7 +847,6 @@ class ScoutView extends WatchUi.View {
     static var targetName = "";
     static var targetBound = false;
     static const ALTERNATE_WAIT_MS = 12000;
-    static const PASS_OVER_SPAN_MS = 60000;
     static const WRONG_NAMES_KEY = "g7WrongNames2";
     static var seenCandidates = [];
     static var lastTriedName = "";
@@ -1189,7 +1188,7 @@ class ScoutView extends WatchUi.View {
             saveSeenNames();
         }
         if (keyName.length() == 0 && namesMatch(candidateName, lastTriedName) && (seenCandidates.size() > 1 || !lookedForOthers)) {
-            if (passedOverMs == null || System.getTimer() - passedOverMs > PASS_OVER_SPAN_MS) {
+            if (passedOverMs == null) {
                 passedOverMs = System.getTimer();
                 ScoutLog.println("DA:" + ALTERNATE_WAIT_MS);
                 passOverTimer.start(ALTERNATE_WAIT_MS);
